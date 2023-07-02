@@ -1,0 +1,9 @@
+.author {
+    color: gold;
+    font-size: 1.5em;
+    margin: 0;
+}
+
+.invisible {
+    visibility: hidden;
+}

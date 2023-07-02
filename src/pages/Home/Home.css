@@ -1,0 +1,65 @@
+p {
+    color: lightslategray;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 100;
+}
+
+.main-text {
+    font-size: 3em;
+    color: white;
+    background: none;
+}
+
+.secondary-text {
+    font-size: 3em;
+    background: none;
+    color: gray;
+}
+
+input {
+    margin-left: 0.25em;
+    font-size: 1.75em;
+    padding: 0.25em;
+    border: none;
+    border-radius: 0.5em;
+    box-sizing: border-box;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 300;
+    background-color: transparent;
+    color: white;
+    box-shadow: 0 0 20px purple;
+}
+
+.main-text-container {
+    width: 66vw;
+    box-sizing: border-box;
+}
+
+.main-container {
+    position: fixed;
+    height: 100dvh;
+    width: 100vw;
+    padding: 0;
+    top: 0;
+    left: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    vertical-align: middle;
+    flex-direction: row;
+}
+
+.main-text-container .arrow {
+    display: inline-block;
+    margin-left: 0.75em;
+    width: 3em;
+    height: 3em;
+    color: purple;
+    vertical-align: middle;
+    transform: translateY(-13%);
+    -webkit-transform: translateY(-13%);
+    -moz-transform: translateY(-13%);
+    -ms-transform: translateY(-13%);
+    -o-transform: translateY(-13%);
+    cursor: pointer;
+}
