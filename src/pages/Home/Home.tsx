@@ -1,7 +1,7 @@
 import './Home.css';
 import Author from './AuthorComponent/Author';
 import { useEffect, useRef, useState } from 'react';
-import { BsFillArrowRightSquareFill } from 'react-icons/bs';
+import { BsChevronDoubleLeft, BsChevronDoubleRight, BsFillArrowRightSquareFill, BsPauseFill, BsPlayFill, BsSkipBackwardFill, BsSkipEndFill, BsSkipForwardFill, BsSkipStartFill } from 'react-icons/bs';
 import { fetchPosts } from './utils/Fetch';
 import { castPost, Post, fetchPost, CurrentPost, castCurrentPost } from './utils/Reddit';
 
@@ -22,7 +22,10 @@ export default function Home() {
     const [prevText, setPrevText] = useState<string>("");
     const [postText, setPostText] = useState<string>("");
     const [authorVisible, setAuthorVisible] = useState<boolean>(false);
-    let commentIndex = 0;
+    const [utterance, setUtterance] = useState<SpeechSynthesisUtterance | null>(null);
+    const [playing, setPlaying] = useState<boolean>(false);
+    const [indices, setIndices] = useState<number[]>([-1, 0, 0]); // [commentIndex, sentenceIndex, spliceIndex]
+    let commentIndex = -2;
     let sentenceIndex = 0;
     let spliceIndex = 0;
     let wordsSpoken = 0;
@@ -30,15 +33,55 @@ export default function Home() {
 
     const dividers = [',', '- ', '...', ':', ';', '--', ' / ', '('];
 
+    // useEffect(() => {
+    //     const handleKeyDown = (event: KeyboardEvent) => {
+    //         if (event.code === 'Space') {
+    //         console.log('KEYDOWN', event.code, playing);
+    //         if (utterance) {
+    //             utterance.onend = () => {};
+    //         }
+    //         setPlaying(() => false);
+    //         speechSynthesis.cancel();
+    //         }
+    //     };
+        
+    //     window.removeEventListener('keydown', handleKeyDown);
+    //     window.addEventListener('keydown', handleKeyDown);
+        
+    //     return () => {
+    //         window.removeEventListener('keydown', handleKeyDown);
+    //     };
+    //     }, [utterance]);
+      
+
+    // useEffect(() => {
+    //     let handleKeyDown = (event: KeyboardEvent) => {
+    //     commentIndex = indices[0];
+    //     sentenceIndex = indices[1];
+    //     spliceIndex = indices[2];
+    //       if (event.code === 'Enter' && speech && !playing) {
+    //         console.log('KEYDOWN', event.code, playing);
+    //         presentText();
+    //       }
+    //     };
+      
+    //     window.removeEventListener('keydown', handleKeyDown);
+    //     window.addEventListener('keydown', handleKeyDown);
+      
+    //     return () => {
+    //       window.removeEventListener('keydown', handleKeyDown);
+    //     };
+    //   }, [utterance, playing]);
+
     function speak(text: string) {
         wordsSpoken = 0;
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.voice = speechSynthesis.getVoices()[0];
         utterance.rate = 1.5;
-        utterance.onend = () => increment('sentence');
+        utterance.onend = () => changeReadingPos('sentence');
         utterance.onboundary = (e) => {
-            console.log(e.name, spliceIndex)
-            const sentences = commentIndex === -1 ? currentPost!.postInfo.selftextSentences! : currentPost!.comments[commentIndex].sentences!;
+            // console.log(e.name, spliceIndex)
+            const sentences = commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;
             if (e.name === 'word')
                 wordsSpoken++;
                 let wordCount = 0;
@@ -50,14 +93,17 @@ export default function Home() {
                             return;
                         }
                         wordCount++;
-                        console.log(wordCount, splice, spliceIndex)
+                        // console.log(wordCount, splice, spliceIndex)
                     }
                 }
         }
         speechSynthesis.speak(utterance);
+        return utterance;
     }
 
     function subredditChosen(e: any) {
+        if (utterance)
+            utterance.onend = () => {};
         e.preventDefault();
         setState(State.LOADING);
         fetchPosts(inputRef.current?.value!, 'hot', null)
@@ -69,30 +115,33 @@ export default function Home() {
                 setPostIndex(() => 0);
                 return response;
             })
-            .then(response => getPostIndex(0, response))
+            .then(response => fetchNewPostIndex(0, response))
         return null;
     }
 
-    function getPostIndex(index: number, postsList : Post[] | null = null) {
+    function fetchNewPostIndex(index: number, postsList : Post[] | null = null) {
         postsList = postsList !== null ? postsList : posts;
         fetchPost(postsList[index])
             .then(response => response.json())
             .then(response => {
                 // console.log(castCurrentPost(postsList![postIndex], response).comments.map(c => [c.body, c.score]));
-                let currentPost = castCurrentPost(postsList![postIndex], response);
+                console.log(JSON.stringify(response, null, 2));
+                let currentPost = castCurrentPost(postsList![index], response);
                 currentPost.comments = currentPost.comments.filter(c => c.body !== '[deleted]' && !c.stickied);
                 initialize(currentPost);
             })
     }
 
     function initialize(post : CurrentPost | null) {
+        console.log(post);
         if (!post) {post = currentPost;}
         const sentences = splitIntoSentences(post!.postInfo.title + '\n' + post!.postInfo.selftext);
+        alert(sentences.join('\n'));
         const splicedSentences = [] as string[][];
         for (let sentence of sentences) {
             splicedSentences.push(...spliceSentence(sentence));
         }
-        post!.postInfo.selftextSentences = splicedSentences;
+        post!.postInfo.sentences = splicedSentences;
         for (const i in post!.comments) {
             const comment = post!.comments[i];
             if (!comment.body) break;
@@ -110,21 +159,31 @@ export default function Home() {
     }
 
     function spliceSentence(sentence: string): string[][] {
-        if (sentence.length < 100) { // short sentence
+        if (sentence.length < 60) { // short sentence
             return [[sentence]];
-        } else if (sentence.length < 175) { // sentence should be displayed as a whole, but split into two parts while being read
+        } else if (sentence.length < 100) { // sentence should be displayed as a whole, but split into two parts while being read
             return [fixRegexOutput(sentence.split(/([,;:]\s+|-\s|\.\.\.|\(|--)/).filter(Boolean))];
         } else { // sentence cannot be displayed as a whole, should be split into multiple parts
             const result = [[]] as string[][];
             const spliced = fixRegexOutput(sentence.split(/([,;:]\s+|-\s|\.\.\.|\(|--)/).filter(Boolean));
             let chars = 0;
             for (let splice of spliced) {
-                if (splice.length + chars < 175) {
+                const lastSentence = result[result.length - 1];
+                if ((lastSentence ? lastSentence.join(' ').length : 0) + splice.length + chars < 100) {
                     result[result.length - 1].push(splice);
-                    chars += splice.length;
                 } else {
-                    result.push([splice]);
-                    chars = 0;
+                    for (let word of splice.split(" ")) {
+                        const lastSentence = result[result.length - 1];
+                        const lastSplice = lastSentence ? lastSentence[lastSentence.length - 1] : '';
+                        if (lastSplice && lastSplice.length + word.length + 1 < 100) {
+                            if (lastSentence)
+                                result[result.length - 1][result[result.length - 1].length - 1] += word + ' ';
+                            else
+                                result[result.length - 1].push(word + ' ');
+                        } else {
+                            result[result.length - 1].push(word + ' ');
+                        }
+                    }
                 }
             }
             return result;
@@ -142,95 +201,161 @@ export default function Home() {
     }
 
     function splitIntoSentences(inp: string): string[] {
-            const substrings = inp.split(/([.!?]+\s+|\n+)/).filter(Boolean);
-            const result : string[] = fixRegexOutput(substrings);
-            return result.reduce((result, current) => {
-                if (result.length === 0) {
-                    result.push(current);
+        const substrings = inp.split(/([.!?]+\s+|\n+)/).filter(Boolean);
+        const result : string[] = fixRegexOutput(substrings);
+        return result.reduce((result, current) => {
+            if (result.length === 0) {
+                result.push(current);
+            } else {
+                const lastString = result[result.length - 1];
+                if (lastString.match(/(?:Dr|Mr|Mrs|Ms|Prof|Rev|Hon|Capt|Col|Gen|Cmdr|etc)\.\s+$/)) {
+                    result[result.length - 1] = lastString.slice(0, -1) + ' ' + current;
                 } else {
-                    const lastString = result[result.length - 1];
-                    if (lastString.match(/(?:Dr|Mr|Mrs|Ms|Prof|Rev|Hon|Capt|Col|Gen|Cmdr|etc)\.\s+$/)) {
-                        result[result.length - 1] = lastString.slice(0, -1) + ' ' + current;
-                    } else {
-                        result.push(current);
-                    }
+                    result.push(current);
                 }
-                return result;
-                }, [] as string[]);
-    }
-
-    function charsBefore(str: string, char: string): number {
-        return str.indexOf(char) !== -1 ? str.indexOf(char) : -1;
-    }
+            }
+            return result;
+        }, [] as string[]);
+}
 
     function presentText() {
-        // alert([currentPost?.postInfo.selftextSentences!.length])
+        if (commentIndex !== -2) {
+            setIndices(() => [commentIndex, sentenceIndex, spliceIndex]);
+            console.log([commentIndex, sentenceIndex, spliceIndex]);
+        }
         if (!currentPost) return;
         let sentence = [] as string[];
         if (commentIndex === -1) {
-            sentence = currentPost!.postInfo.selftextSentences![sentenceIndex];
+            sentence = currentPost!.postInfo.sentences![sentenceIndex];
         } else {
             // console.log(currentPost!.comments[commentIndex], commentIndex);
             sentence = currentPost!.comments[commentIndex].sentences![sentenceIndex];
         }
         if (!sentence) {
-            increment('sentence');
+            changeReadingPos('sentence');
             console.log('INCREMENTING')
             return;
         }
         if (spliceIndex === 0) {
-            speak(sentence.join(''));
+            setUtterance(() => speak(sentence.join('')));
         }
         updateText();
+    }
+
+    function getCurrentPostOrComment() {
+        return commentIndex === -1 ? currentPost!.postInfo : currentPost!.comments[commentIndex];
+    }
+
+    function getCurrentSentences() {
+        return commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;
+    }
+
+    function getCurrentSentence() {
+        return getCurrentSentences()[sentenceIndex];
+    }
+
+    function getCurrentSlice() {
+        return getCurrentSentence()[spliceIndex];
     }
 
     function updateText() {
         let sentence: string[];
         if (commentIndex === -1) {
-            sentence = currentPost!.postInfo.selftextSentences![sentenceIndex];
+            sentence = currentPost!.postInfo.sentences![sentenceIndex];
         } else {
             sentence = currentPost!.comments[commentIndex].sentences![sentenceIndex];
         }
         if (sentenceIndex === 0)
-            setAuthorText(() => 'u/' + (commentIndex === -1 ? currentPost!.postInfo.author : currentPost!.comments[commentIndex].author));
+            setAuthorText(() => 'u/' + getCurrentPostOrComment().author);
         setAuthorVisible(() => sentenceIndex === 0);
         if (sentence.length === 1) {
             setPrevText(() => '');
             setMainText(() => sentence[0]);
             setPostText(() => '');
         } else {
-            setPrevText(() => sentence.slice(0, spliceIndex).join(''));
-            setMainText(() => sentence[spliceIndex]);
-            setPostText(() => sentence.slice(spliceIndex + 1).join(''));
+            if (sentence.join('').length > 100) {
+                setPrevText(() => '');
+                setMainText(() => sentence[spliceIndex]);
+                setPostText(() => '');
+            } else {
+                setPrevText(() => sentence.slice(0, spliceIndex).join(''));
+                setMainText(() => sentence[spliceIndex]);
+                setPostText(() => sentence.slice(spliceIndex + 1).join(''));
+            }
         }
     }
 
-    function increment(incrementType : 'sentence' | 'slice') {
-        const sentences = commentIndex === -1 ? currentPost!.postInfo.selftextSentences! : currentPost!.comments[commentIndex].sentences!;
-        if (commentIndex === -1 && sentences.length === 0) {
-            commentIndex = 0;
+    function changeReadingPos(incrementType: 'splice' | 'sentence' | 'comment', increment: -1|1 = 1) {
+        const sentences = getCurrentSentences();
+        if (incrementType === 'splice') spliceIndex += increment;
+        if (incrementType === 'sentence') sentenceIndex += increment;
+        if (incrementType === 'comment') commentIndex += increment;
+        if (incrementType !== 'splice') spliceIndex = 0;
+
+        
+        if (sentenceIndex < 0) {
+            sentenceIndex = getCurrentPostOrComment().sentences![Math.max(0, commentIndex - 1)].length - 1;
+            commentIndex--;
+        }
+        if (sentenceIndex >= sentences.length) {
+            sentenceIndex = 0;
+            commentIndex++;
+        }
+        if (commentIndex < -1) {
+            commentIndex = -1;
             sentenceIndex = 0;
             spliceIndex = 0;
-            presentText();
+        }
+        if (commentIndex >= currentPost!.comments.length) {
+            fetchNewPostIndex(postIndex + 1);
+            setState(State.LOADING);
             return;
         }
-        if (incrementType === 'sentence') {
-            spliceIndex = 0;
-            if (sentenceIndex >= sentences.length - 1) {
-                sentenceIndex = 0;
-                if (commentIndex >= currentPost!.comments.length - 1) {
-                    getPostIndex(postIndex + 1);
-                    setMainText('Loading...');
-                } else {
-                    commentIndex++;
-                }
-            } else {
-                sentenceIndex++;
-            }
-        } else {
-            spliceIndex = Math.max(spliceIndex + 1, sentences[sentenceIndex].length - 1)
-        }
+        spliceIndex = Math.min(sentences[sentenceIndex].length - 1, spliceIndex);
+        spliceIndex = Math.max(0, spliceIndex);
         presentText();
+        return;
+        // if (commentIndex === -1 && sentences.length === 0) {
+        //     commentIndex = 0;
+        //     sentenceIndex = 0;
+        //     spliceIndex = 0;
+        //     presentText();
+        //     return;
+        // }
+        // if (incrementType === 'sentence') {
+        //     spliceIndex = 0;
+        //     if (sentenceIndex >= sentences.length - 1) {
+        //         sentenceIndex = 0;
+        //         if (commentIndex >= currentPost!.comments.length - 1) {
+        //             fetchNewPostIndex(postIndex + 1);
+        //             setMainText('Loading...');
+        //         } else {
+        //             commentIndex++;
+        //         }
+        //     } else {
+        //         sentenceIndex++;
+        //     }
+        // } else {
+        //     spliceIndex = Math.max(spliceIndex + 1, sentences[sentenceIndex].length - 1)
+        // }
+        // presentText();
+    }
+
+    function doPlay() {
+        setPlaying(() => true);
+        commentIndex = indices[0];
+        sentenceIndex = indices[1];
+        spliceIndex = indices[2];
+        presentText();
+    }
+
+    function doPause() {
+        setPlaying(() => false);
+        if (utterance) {
+            utterance.onend = () => {};
+        }
+        setPlaying(() => false);
+        speechSynthesis.cancel();
     }
 
     useEffect(() => {
@@ -238,6 +363,7 @@ export default function Home() {
         sentenceIndex = 0;
         spliceIndex = 0;
         presentText();
+        setPlaying(() => true);
     }, [currentPost])
 
     return <>
@@ -261,6 +387,17 @@ export default function Home() {
                             <mark className="main-text">{mainText}</mark>
                             <mark className="secondary-text">{postText}</mark>
                         </p>
+                    <div className="controls-container">
+                        <BsSkipBackwardFill className={`icon ${playing ? 'unavailable' : ''}`}/>
+                        <BsSkipStartFill className={`icon ${playing ? 'unavailable' : ''}`}/>
+                        <BsChevronDoubleLeft className={`icon ${playing ? 'unavailable' : ''}`}/>
+                        { playing ? 
+                            <BsPauseFill className="icon" onClick={doPause}/> : 
+                            <BsPlayFill className="icon" onClick={doPlay}/>}
+                        <BsChevronDoubleRight className={`icon ${playing ? 'unavailable' : ''}`}/>
+                        <BsSkipEndFill className={`icon ${playing ? 'unavailable' : ''}`}/>
+                        <BsSkipForwardFill className={`icon ${playing ? 'unavailable' : ''}`}/>
+                    </div>
                     <Author author="---" visible={false}/>
                 </>
                 : null

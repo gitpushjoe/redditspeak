@@ -10,7 +10,7 @@ export type Post = {
     url: string,
     stickied: boolean,
     selftext: string,
-    selftextSentences?: string[][],
+    sentences?: string[][],
 };
 
 export type Comment = {

@@ -1,13 +1,20 @@
 p {
     color: lightslategray;
     font-family: 'Roboto', sans-serif;
-    font-weight: 100;
+    font-weight: 900;
 }
 
 .main-text {
     font-size: 3em;
     color: white;
     background: none;
+    padding: 0;
+    margin: 0;
+    transform: translateY(8%);
+    -webkit-transform: translateY(8%);
+    -moz-transform: translateY(8%);
+    -ms-transform: translateY(8%);
+    -o-transform: translateY(8%);
 }
 
 .secondary-text {
@@ -62,4 +69,28 @@ input {
     -ms-transform: translateY(-13%);
     -o-transform: translateY(-13%);
     cursor: pointer;
+}
+
+.controls-container {
+    position: fixed;
+    top: 77.5vh;
+    left: 50vw;
+    transform: translateX(-50%);
+    -webkit-transform: translateX(-50%);
+    -moz-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    -o-transform: translateX(-50%);
+}
+
+.controls-container .icon {
+    width: 2.5em;
+    height: 2.5em;
+    margin: 0 0.5em;
+    cursor: pointer;
+    color: white;
+}
+
+.controls-container .icon.unavailable {
+    color: gray;
+    cursor: default;
 }
