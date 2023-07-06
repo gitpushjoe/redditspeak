@@ -1,12 +1,15 @@
 import './Home.css';
 import Author from './AuthorComponent/Author';
 import { useEffect, useRef, useState } from 'react';
-import {BsFillArrowRightSquareFill} from 'react-icons/bs';
+import { BsFillArrowRightSquareFill } from 'react-icons/bs';
+import { BiHome, BiSolidHome, BiSolidInfoCircle } from 'react-icons/bi';
+import { GrReddit } from 'react-icons/gr';
 import { fetchPosts } from './utils/Fetch';
 import { castPost, Post, fetchPost, CurrentPost, castCurrentPost } from './utils/Reddit';
 import speak from './utils/SpeechSynth';
 import { splitIntoSentences, spliceSentence, abbrvNumber } from './utils/String';
 import PlaybackControls from './PlaybackComponent/PlaybackControls';
+import { RiSettings4Fill } from 'react-icons/ri';
 
 export default function Home() {
 
@@ -27,19 +30,21 @@ export default function Home() {
     const [authorVisible, setAuthorVisible] = useState<boolean>(false);
     const [utterance, setUtterance] = useState<SpeechSynthesisUtterance | null>(null);
     const [playing, setPlaying] = useState<boolean>(true);
-    const [indices, setIndices] = useState<number[]>([-1, 0, 0]); // [commentIndex, sentenceIndex, spliceIndex]
+    const [indices, setIndices] = useState<number[]>([-1, 0, 0]); // [commentIndex, sentenceIndex, spliceIndex]\
     let commentIndex = -2; // -2 = uninitialized, -1 = post, 0+ = comment
     let sentenceIndex = 0;
     let spliceIndex = 0;
     let wordsSpoken = 0;
     const inputRef = useRef<HTMLInputElement>(null);
+    const searchRef = useRef<HTMLSelectElement>(null);
 
     function subredditChosen(e: any) {
         if (utterance)
             utterance.onend = () => {};
         e.preventDefault();
         setState(State.LOADING);
-        fetchPosts(inputRef.current?.value!, 'hot', null)
+        const searchSetting = searchRef.current?.value!.split('-');
+        fetchPosts(inputRef.current?.value!, searchSetting![0], searchSetting![1])
             .then(response => response.json())
             .then(response => {
                 response = response.data.children.map((post: any) => castPost(post.data)).filter((post: Post) => post.stickied === false);
@@ -130,7 +135,7 @@ export default function Home() {
     const getCurrentPostOrComment = () => {return commentIndex === -1 ? currentPost!.postInfo : currentPost!.comments[commentIndex];}
     const getCurrentSentences = () => {return commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;}
 
-    function updateText(splice: number|null = null) { 
+    function updateText(splice: number|null = null)  { 
         if (splice !== null) 
             {spliceIndex = splice;}
         let sentence: string[];
@@ -213,6 +218,11 @@ export default function Home() {
         speechSynthesis.cancel();
     }
 
+    function doCancel() {
+        setState(() => State.MAIN);
+        doPause();
+    }
+
     useEffect(() => {
         commentIndex = -1;
         sentenceIndex = 0;
@@ -220,9 +230,7 @@ export default function Home() {
         presentText(playing);
     }, [currentPost])
 
-    useEffect(() => {
-        setState(() => State.MAIN);
-    }, [])
+    useEffect(doCancel, []);
 
     return <>
     <div className="main-container">
@@ -237,6 +245,18 @@ export default function Home() {
                         <br/>
                     </span>
                 </form>
+                    <span>
+                        <p className="subtitle" style={{display: 'inline-block'}}>Search Setting: </p>
+                            <select name="searchSetting" id="searchSetting" defaultValue="hot" ref={searchRef}>
+                                <option value="hot-null">🔥 HOT</option>
+                                <option value="top-day">📈 TOP (24 hours)</option>
+                                <option value="top-week">📈 TOP (week)</option>
+                                <option value="top-month">📈 TOP (month)</option>
+                                <option value="top-year">📈 TOP (year)</option>
+                                <option value="top-all">📈 TOP (all time)</option>
+                            </select>
+                    </span>
+                    <br/>
                     <span>
                         <p className="subtitle" style={{display: 'inline-block'}}>Reader Setting: </p>
                         <select name="readerSetting" id="readerSetting" defaultValue="discussion">
@@ -261,12 +281,22 @@ export default function Home() {
                             <mark className="main-text">{mainText}</mark>
                             <mark className="secondary-text">{postText}</mark>
                         </p>
-                    <PlaybackControls changeReadingPos={changeReadingPos} fetchNewPostIndex={fetchNewPostIndex} playing={playing} indices={indices} postIndex={postIndex} doPlay={doPlay} doPause={doPause}/>
                     <Author author="---" visible={false}/>
                 </>
                 : null
                 }
         </div>
     </div>
+    { state !== State.LOADING &&
+    <div className="controls-container">
+        { state === State.ACTIVE && 
+        <>
+            <PlaybackControls changeReadingPos={changeReadingPos} fetchNewPostIndex={fetchNewPostIndex} playing={playing} indices={indices} postIndex={postIndex} doPlay={doPlay} doPause={doPause}/>
+        </>}
+        <RiSettings4Fill className="icon" />
+        { state === State.ACTIVE ? <BiSolidHome className="icon" onClick={doCancel}/> :
+        state === State.MAIN ? <GrReddit className="icon"/> : null}
+        <BiSolidInfoCircle className="icon" />
+    </div>}
     </>
 }

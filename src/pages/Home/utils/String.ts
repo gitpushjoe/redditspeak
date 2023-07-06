@@ -17,12 +17,12 @@ export function spliceSentence(sentence: string, smallSentenceLength : number = 
                 for (let word of splice.split(" ")) {
                     lastWords += word + ' ';
                     if (lastWords.length + chars > 80) {
-                        result[result.length - 1].push(...spliceSentence(lastWords, 90).flat());
+                        result[result.length - 1].push(...spliceSentence(lastWords, 80, 200).flat());
                         lastWords = '';
                     }
                 }
                 if (lastWords.length > 0) {
-                    result[result.length - 1].push(...spliceSentence(lastWords, 90).flat());
+                    result[result.length - 1].push(...spliceSentence(lastWords, 80, 200).flat());
                 }
             }
         }

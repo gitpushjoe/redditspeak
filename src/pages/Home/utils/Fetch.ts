@@ -1,7 +1,4 @@
-type sortType = 'hot' | 'top';
-type periodType = 'day' | 'week' | 'month' | 'year' | 'all';
-
-export function fetchPosts(subreddit: string, sort: sortType, period: periodType|null): Promise<any> {
+export function fetchPosts(subreddit: string, sort: string, period: string): Promise<any> {
     let url : string;
     if (sort === 'hot') {
         url = `https://www.reddit.com/r/${subreddit}/hot.json?limit=100`;
