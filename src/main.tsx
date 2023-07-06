@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom'
 
 function App() {
 
-    document.body.style = 'background: #1c1e21';
+  document.body.style = 'background: #1c1e21';
   return <>
     <link
   href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"

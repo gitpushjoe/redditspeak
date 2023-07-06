@@ -94,3 +94,8 @@ input {
     color: gray;
     cursor: default;
 }
+
+.subtitle {
+    color: lightslategray;
+    font-size: 1.5em;
+}

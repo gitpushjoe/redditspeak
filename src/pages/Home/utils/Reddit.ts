@@ -10,6 +10,7 @@ export type Post = {
     url: string,
     stickied: boolean,
     selftext: string,
+    subreddit: string,
     sentences?: string[][],
 };
 
@@ -44,6 +45,7 @@ export function castPost(post: any): Post {
         url: post.url,
         stickied: post.stickied,
         selftext: post.selftext,
+        subreddit: post.subreddit,
     }
 }
 
@@ -67,5 +69,5 @@ export function castCurrentPost(source: Post, data: any): CurrentPost {
 };
 
 export async function fetchPost(post: Post, offset: number = 0): Promise<any> {
-    return fetch(`https://www.reddit.com${post.permalink}.json?offset=${offset}&limit=200`)
+    return fetch(`https://www.reddit.com/r/${post.subreddit}/comments/${post.id}.json?limit=900&depth=3&sort=top&offset=${offset}`)
 }
