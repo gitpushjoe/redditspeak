@@ -1,12 +1,12 @@
 import './Home.css';
 import Author from './AuthorComponent/Author';
-import SpeechSynth from './utils/SpeechSynth';
 import { useEffect, useRef, useState } from 'react';
-import { BsChevronDoubleLeft, BsChevronDoubleRight, BsFillArrowRightSquareFill, BsPauseFill, BsPlayFill, BsSkipBackwardFill, BsSkipEndFill, BsSkipForwardFill, BsSkipStartFill } from 'react-icons/bs';
+import {BsFillArrowRightSquareFill} from 'react-icons/bs';
 import { fetchPosts } from './utils/Fetch';
 import { castPost, Post, fetchPost, CurrentPost, castCurrentPost } from './utils/Reddit';
 import speak from './utils/SpeechSynth';
 import { splitIntoSentences, spliceSentence, abbrvNumber } from './utils/String';
+import PlaybackControls from './PlaybackComponent/PlaybackControls';
 
 export default function Home() {
 
@@ -28,7 +28,7 @@ export default function Home() {
     const [utterance, setUtterance] = useState<SpeechSynthesisUtterance | null>(null);
     const [playing, setPlaying] = useState<boolean>(true);
     const [indices, setIndices] = useState<number[]>([-1, 0, 0]); // [commentIndex, sentenceIndex, spliceIndex]
-    let commentIndex = -2;
+    let commentIndex = -2; // -2 = uninitialized, -1 = post, 0+ = comment
     let sentenceIndex = 0;
     let spliceIndex = 0;
     let wordsSpoken = 0;
@@ -65,7 +65,7 @@ export default function Home() {
             })
     }
 
-    function initialize(post : CurrentPost | null) {
+    function initialize(post : CurrentPost | null) { // Cut comments of the current post into sentence splices
         if (!post) {post = currentPost;}
         const sentences = splitIntoSentences(post!.postInfo.title + '\n' + post!.postInfo.selftext);
         const splicedSentences = [] as string[][];
@@ -89,7 +89,7 @@ export default function Home() {
         setState(() => State.ACTIVE);
     }
 
-    function presentText(withAudio = true) {
+    function presentText(withAudio = true) { // Present the current sentence, and if withAudio, speak it
         if (commentIndex !== -2) {
             setIndices(() => [commentIndex, sentenceIndex, spliceIndex]);
         }
@@ -106,14 +106,15 @@ export default function Home() {
         }
         if (spliceIndex === 0 && withAudio) {
             const utterance = speak(sentence.join(''), [commentIndex, sentenceIndex, spliceIndex], currentPost, changeReadingPos, updateText);
-            wordsSpoken = 0;
-            utterance.onboundary = (e) => { // add event listener to utterance to update spliceIndex
+            wordsSpoken = -1;
+            utterance.onboundary = (e) => { // add event listener to utterance to update spliceIndex when a word is spoken
                 const sentences = commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;
                 let wordCount = 0;
                 if (e.name === 'word') wordsSpoken++;
                 for (const splice in sentences[sentenceIndex]) {
-                    for (const word in sentences[sentenceIndex][splice].split(' ')) {
+                    for (const _ in sentences[sentenceIndex][splice].split(' ').filter(Boolean)) {
                         if (wordCount === wordsSpoken) {
+                            // console.log(sentences[sentenceIndex].flat().join(' ').split(' ').filter(Boolean).slice(0, wordsSpoken).join(' '));
                             updateText(Number(splice));
                             return;
                         }
@@ -126,21 +127,12 @@ export default function Home() {
         updateText();
     }
 
-    function getCurrentPostOrComment() {
-        return commentIndex === -1 ? currentPost!.postInfo : currentPost!.comments[commentIndex];
-    }
+    const getCurrentPostOrComment = () => {return commentIndex === -1 ? currentPost!.postInfo : currentPost!.comments[commentIndex];}
+    const getCurrentSentences = () => {return commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;}
 
-    function getCurrentSentences() {
-        return commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;
-    }
-
-    function getCurrentSentence() {
-        return getCurrentSentences()[sentenceIndex];
-    }
-
-    function updateText(splice: number|null = null) {
+    function updateText(splice: number|null = null) { 
         if (splice !== null) 
-            {spliceIndex = splice; console.log(splice);}
+            {spliceIndex = splice;}
         let sentence: string[];
         if (commentIndex === -1) {
             sentence = currentPost!.postInfo.sentences![sentenceIndex];
@@ -167,17 +159,19 @@ export default function Home() {
         }
     }
 
-    function changeReadingPos(incrementType: 'splice' | 'sentence' | 'comment', increment: -1|0|1 = 1, indices : number[]|null = null, withAudio = true) {
+    // Updates the text indices to the next/previous sentence or comment, with bounds checking
+    // Fetches the next post if the current post is finished
+    // (Optionally) speaks the next/previous sentence or comment
+    function changeReadingPos(incrementType: 'sentence' | 'comment', increment: -1|0|1 = 1, indices : number[]|null = null, withAudio = true) {
         if (indices) {
             commentIndex = indices[0];
             sentenceIndex = indices[1];
             spliceIndex = indices[2];
         }
         const sentences = getCurrentSentences();
-        if (incrementType === 'splice') spliceIndex += increment;
         if (incrementType === 'sentence') sentenceIndex += increment;
         if (incrementType === 'comment') commentIndex += increment;
-        if (incrementType !== 'splice') spliceIndex = 0;
+        spliceIndex = 0;
         
         if (sentenceIndex < 0) {
             const post = commentIndex - 1 < 0 ? currentPost!.postInfo : currentPost!.comments[commentIndex - 1];
@@ -230,33 +224,33 @@ export default function Home() {
         setState(() => State.MAIN);
     }, [])
 
-    function doRewindSentence() {if (!playing) changeReadingPos('sentence', -1, indices, false);}
-    function doRewindComment() {if (!playing) changeReadingPos('comment', -1, indices, false);}
-    function doRewindPost() {if (!playing) {
-        if (indices[0] === -1 && indices[1] === 0 && indices[2] === 0) {
-            fetchNewPostIndex(postIndex - 1);
-        } else {
-            changeReadingPos('comment', -1, [-1, 0, 0], false);
-        }
-    }}
-
-    function doFastFowardSentence() {if (!playing) changeReadingPos('sentence', 1, indices, false);}
-    function doFastFowardComment() {if (!playing) changeReadingPos('comment', 1, indices, false);}
-    function doFastFowrardPost() {if (!playing) fetchNewPostIndex(postIndex + 1);}
-
     return <>
     <div className="main-container">
-        <div className="main-text-container">
+        <div className={`main-text-container ${state === State.MAIN ? 'waiting-state' : 'main-state'}`}>
                 { state === State.MAIN ?
+                <>
                 <form onSubmit={subredditChosen}>
                     <span>
                         <p className="main-text" style={{display: 'inline-block'}}>r/</p> 
                         <input type="text" placeholder="AskReddit" ref={inputRef}/>
                         <BsFillArrowRightSquareFill className="arrow" onClick={subredditChosen}/>
                         <br/>
-                        <p className="subtitle" style={{display: 'inline-block'}}>Search Setting: </p>
                     </span>
                 </form>
+                    <span>
+                        <p className="subtitle" style={{display: 'inline-block'}}>Reader Setting: </p>
+                        <select name="readerSetting" id="readerSetting" defaultValue="discussion">
+                            <option value="post">Post Focus</option>
+                            <option value="answer">Answer Focus</option>
+                            <option value="reply">Reply Focus</option>
+                            <option value="discussion">Discussion Focus</option>
+                            <option value="discourse">Discourse Focus</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </span>
+                    {/* <BsFillQuestionCircleFill color="lightslategrey" size="1.5em"/> */}
+                    <p className="reader-explained">Reads up to 300 comments without replies.</p>
+                    </>
                 : state === State.LOADING ?
                     <p className="main-text">Loading...</p>
                 : state === State.ACTIVE ?
@@ -267,17 +261,7 @@ export default function Home() {
                             <mark className="main-text">{mainText}</mark>
                             <mark className="secondary-text">{postText}</mark>
                         </p>
-                    <div className="controls-container">
-                        <BsSkipBackwardFill className={`icon ${playing ? 'unavailable' : ''}`} onClick={doRewindPost}/>
-                        <BsSkipStartFill className={`icon ${playing ? 'unavailable' : ''}`} onClick={doRewindComment}/>
-                        <BsChevronDoubleLeft className={`icon ${playing ? 'unavailable' : ''}`} onClick={doRewindSentence}/>
-                        { playing ? 
-                            <BsPauseFill className="icon" onClick={doPause}/> : 
-                            <BsPlayFill className="icon" onClick={doPlay}/>}
-                        <BsChevronDoubleRight className={`icon ${playing ? 'unavailable' : ''}`} onClick={doFastFowardSentence}/>
-                        <BsSkipEndFill className={`icon ${playing ? 'unavailable' : ''}`} onClick={doFastFowardComment}/>
-                        <BsSkipForwardFill className={`icon ${playing ? 'unavailable' : ''}`} onClick={doFastFowrardPost}/>
-                    </div>
+                    <PlaybackControls changeReadingPos={changeReadingPos} fetchNewPostIndex={fetchNewPostIndex} playing={playing} indices={indices} postIndex={postIndex} doPlay={doPlay} doPause={doPause}/>
                     <Author author="---" visible={false}/>
                 </>
                 : null

@@ -1,0 +1,18 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+iframe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: calc(100vw / (16 / 9));
+  transform: translate(-2px, -2px);
+  -webkit-transform: translate(-2px, -2px);
+  -moz-transform: translate(-2px, -2px);
+  -ms-transform: translate(-2px, -2px);
+  -o-transform: translate(-2px, -2px);
+}
