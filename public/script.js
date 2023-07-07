@@ -10,3 +10,13 @@ function onYouTubePlayerAPIReady() {
   youtubePlayer = new YT.Player('youtube-iframe');
   setTimeout(() => {youtubePlayer.playVideo()}, 1000);
 }
+
+document.addEventListener('pauseVideo', () => {
+    console.log('pauseVideo')
+    youtubePlayer.pauseVideo();
+}); 
+
+document.addEventListener('playVideo', () => {
+    console.log('playVideo')
+    youtubePlayer.playVideo();
+});

@@ -2,6 +2,9 @@
     color: gold;
     font-size: 1.5em;
     margin: 0;
+    text-shadow:
+    0 0 5px black,
+    0 0 3px black;
 }
 
 .invisible {

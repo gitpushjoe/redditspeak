@@ -5,10 +5,11 @@ body {
 }
 
 iframe {
+  z-index: -2;
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
+  width: 102vw;
   height: calc(100vw / (16 / 9));
   transform: translate(-2px, -2px);
   -webkit-transform: translate(-2px, -2px);

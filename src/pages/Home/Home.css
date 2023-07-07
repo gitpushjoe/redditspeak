@@ -4,17 +4,22 @@ p {
     font-weight: 900;
 }
 
-.main-text {
+.primary-text {
     font-size: 3em;
     color: white;
     background: none;
-    padding: 0;
-    margin: 0;
+    padding: 0 0.25em 0 0;
     transform: translateY(8%);
     -webkit-transform: translateY(8%);
     -moz-transform: translateY(8%);
     -ms-transform: translateY(8%);
     -o-transform: translateY(8%);
+}
+
+.primary-text,.secondary-text {
+    margin: 0;
+    padding: 0;
+    line-height: 1.3em;
 }
 
 .secondary-text {
@@ -23,9 +28,9 @@ p {
     color: gray;
 }
 
-input {
+.input-field {
     margin-left: 0.25em;
-    font-size: 1.75em;
+    font-size: 1.2em;
     padding: 0.25em;
     border: none;
     border-radius: 0.5em;
@@ -34,20 +39,28 @@ input {
     font-weight: 300;
     background-color: transparent;
     color: white;
-    box-shadow: 0 0 20px purple;
+    box-shadow: 0 0 30px purple;
+    height: 2.5em;
+    transform: translateY(-0.45em);
+    -webkit-transform: translateY(-0.45em);
+    -moz-transform: translateY(-0.45em);
+    -ms-transform: translateY(-0.45em);
+    -o-transform: translateY(-0.45em);
+    color: red;
 }
 
 
-.main-text-container {
+.primary-text-container {
     width: 55vw;
     box-sizing: border-box;
     text-align: center;
     font-size: 1.1em;
+    padding: 0;
 }
 
-.main-text-container.waiting-state {
+.primary-text-container.waiting-state {
     width: fit-content;
-    padding: 1.5em 3em;
+    padding: .75em 3em;
     border-radius: 1em;
     background-color: #1c1e21ee;
     box-shadow: 0 0 10px 15px #1c1e21ee;
@@ -57,7 +70,7 @@ input {
     -o-border-radius: 1em;
 }
 
-.main-text-container.main-state .main-text {
+.primary-text-container.main-state .primary-text {
     /* text-shadow: 0px 0px 5px black; */
     text-shadow:
     -3px -3px 0 #000,
@@ -76,7 +89,7 @@ input {
     0 0 25px black;
 }
 
-.main-container {
+.primary-container {
     position: fixed;
     height: 100dvh;
     width: 100vw;
@@ -90,11 +103,11 @@ input {
     flex-direction: row;
 }
 
-.main-text-container .arrow {
+.primary-text-container .arrow {
     display: inline-block;
     margin-left: 0.75em;
-    width: 3em;
-    height: 3em;
+    width: 2.5em;
+    height: 2.5em;
     color: purple;
     vertical-align: middle;
     transform: translateY(-13%);
@@ -122,8 +135,7 @@ input {
     -moz-border-radius: 15px;
     -ms-border-radius: 15px;
     -o-border-radius: 15px;
-    text-align: center;
-    
+    text-align: center;   
 }
 
 .controls-container .icon {
@@ -142,7 +154,7 @@ input {
 .subtitle {
     color: lightslategray;
     font-size: 1.7em;
-    margin: 0.45em 0.5em 0 0;
+    margin: 0.25em 0.5em 0 0;
 }
 
 select {
@@ -155,4 +167,48 @@ select {
     padding: 0;
     font-size: 1.3em;
     margin-top: 0.5em;
+}
+
+#settingsModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100dvh;
+    width: 100vw;
+    background-color: #000000dd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 100;
+}
+
+.modal-option-name {
+    color: black;
+    font-size: 1.3em;
+    font-weight: 300;
+    display: inline-block;
+    padding-right: .5em;
+    margin: 0;
+}
+
+.btn-sm {
+    font-size: 100em;
+}
+
+.fix-dropdown {
+    position: absolute;
+    bottom: 0.2em;
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+a {
+    transform: translate(0%);
+    -webkit-transform: translate(0%);
+    -moz-transform: translate(0%);
+    -ms-transform: translate(0%);
+    -o-transform: translate(0%);
 }

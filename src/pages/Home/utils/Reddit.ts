@@ -32,6 +32,21 @@ export type CurrentPost = {
     comments: Comment[],
 };
 
+const dummyPost = {
+    all_awardings: [],
+    author: '',
+    created: '',
+    id: '',
+    name: '',
+    permalink: '',
+    score: 0,
+    title: '',
+    url: '',
+    stickied: false,
+    selftext: '',
+    subreddit: '',
+}
+
 export function castPost(post: any): Post {
     return {
         all_awardings: post.all_awardings,
@@ -68,6 +83,28 @@ export function castCurrentPost(source: Post, data: any): CurrentPost {
     }
 };
 
-export async function fetchPost(post: Post, offset: number = 0): Promise<any> {
-    return fetch(`https://www.reddit.com/r/${post.subreddit}/comments/${post.id}.json?limit=600&depth=3&sort=top&offset=${offset}`)
+export function castRepliesToCurrentPost(replies: any): CurrentPost|null {
+    if (!replies.data || !replies.data.children || replies.data.children[0].kind !== 't1') {
+        return null;
+    }
+    return {
+        postInfo: dummyPost,
+        comments: replies.data.children.map((comment: any) : Comment => {
+            return {
+                replies: comment.data.replies,
+                author: comment.data.author,
+                body: comment.data.body,
+                created: comment.data.created,
+                id: comment.data.id,
+                name: comment.data.name,
+                permalink: comment.data.permalink,
+                score: comment.data.score,
+                stickied: comment.data.stickied,
+            }
+        })
+    }
+}
+
+export async function fetchPost(post: Post, count: number = 100, depth: number = 0): Promise<any> {
+    return fetch(`https://www.reddit.com/r/${post.subreddit}/comments/${post.id}.json?limit=${count}&depth=${depth}`)
 }
