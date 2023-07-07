@@ -1,7 +1,4 @@
-import {CurrentPost } from './Reddit';
-
-export default function speak(text: string, indices : number[], changeReadingPos: Function, voice : SpeechSynthesisVoice | null, rate : number, volume : number) {
-    const [commentIndex, sentenceIndex, _] = indices;
+export default function speak(text: string, changeReadingPos: Function, voice : SpeechSynthesisVoice | null, rate : number, volume : number) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = voice || speechSynthesis.getVoices()[0];
     utterance.rate = rate;

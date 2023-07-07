@@ -41,7 +41,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     const [commentsPerPost, setCommentsPerPost] = useState<number>(parseInt(localStorage.getItem('config-commentsPerPost') || '0'));
     const [readReplies, setReadReplies] = useState<string>(localStorage.getItem('config-readReplies') || 'disabled');
     const [voice, setVoice] = useState<string>(localStorage.getItem('config-voice') || '0');
-    const [readingSpeed, setReadingSpeed] = useState<string>(localStorage.getItem('config-readingSpeed') || '1.75');
+    const [readingSpeed, setReadingSpeed] = useState<string>(localStorage.getItem('config-readingSpeed') || '1.0');
     const [volume, setVolume] = useState<string>(localStorage.getItem('config-volume') || '100');
     const [backgroundVideo, setBackgroundVideo] = useState<string>(localStorage.getItem('config-backgroundVideo') || 'enabled');
 
@@ -201,8 +201,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                 .then(response => response.json())
                 .then(response => {
                     response = response[0].data.children[0].data;
-                    console.log(response);
-                    const post = castPost(response);
+                    const post  = castPost(response);
                     setPosts(() => [post]);
                     return post;
                 })
@@ -298,7 +297,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             sentence = sentence.slice(3);
         }
         if (spliceIndex === 0 && withAudio) {
-            const utterance = speak(sentence.join(''), [commentIndex, sentenceIndex, spliceIndex], changeReadingPos, speechSynthesis.getVoices()[parseInt(voice)], parseFloat(readingSpeed), parseInt(volume)/100);
+            const utterance = speak(sentence.join(''), changeReadingPos, speechSynthesis.getVoices()[parseInt(voice)], parseFloat(readingSpeed), parseInt(volume)/100);
             wordsSpoken = -1;
             utterance.onboundary = (e) => { // add event listener to utterance to update spliceIndex when a word is spoken
                 const sentences = commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;
@@ -430,12 +429,18 @@ export default function Home(props: {setBackgroundVideo : Function}) {
 
     return <>
         <div className={`primary-container`} style={{backgroundColor: (backgroundVideo === 'enabled' ? '#00000000' : '#112233'), cursor : (controlsContainerVisible ? 'default' : 'none')}}>
+            <div>
+                <div style={{textAlign: 'center'}}>
+                    <p className="text-white primary-text">redditSpeak</p>
+                    <Author author="A text-to-speech reader for Reddit." visible={true} color={"white"}/>
+                    <br/>
+                </div>
             <div className={`primary-text-container ${state === State.MAIN ? 'waiting-state' : 'main-state'}`}>
                 {state === State.MAIN ?
                     <>
                         <form onSubmit={subredditChosen}>
                             <span>
-                                { searchBy === 'subreddit' && <p className="primary-text" style={{ display: 'inline-block', paddingRight: '0.2em'}}>r/</p> }
+                                { searchBy === 'subreddit' && <h1 className="text-white" style={{ display: 'inline-block', paddingRight: '0.2em'}}>r/</h1> }
                                 <input type="text" className="form-control input-sm input-field" placeholder={searchBy === 'subreddit' ? 'askReddit' : 'https://www.reddit.com/r/...'} style={{ width: '55%', display: 'inline-block', margin: '0', boxShadow: '0 0 20px purple' }} ref={inputRef} />
                                 <BsFillArrowRightSquareFill className="arrow" onClick={subredditChosen} />
                                 <br />
@@ -545,6 +550,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                     </div>
                 </div>
             </div>
+            </div>
         </div>
 
         {showModal &&
@@ -595,7 +601,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                         <span>
                             <p className='modal-option-name'>Voice: </p>
                             <Dropdown options={
-                                speechSynthesis.getVoices().filter(voice => voice.name.indexOf('English') !== -1).map((voice, index) => DropdownOption(index.toString(), voice.name.split(' - ')[0].replace('Microsoft ', '').replace('Google ', '')))
+                                speechSynthesis.getVoices().filter(voice => voice.name.indexOf('English') !== -1).slice(0, 5).map((voice, index) => DropdownOption(index.toString(), voice.name.split(' - ')[0].replace('Microsoft ', '').replace('Google ', '').replace('U', '(unstable) U')))
                             } setSelected={m_setVoice} buttonText={m_voice} dropdownSize='sm' useOptionsForButtonText={true}/>
                         </span>
                         <br/>
@@ -604,9 +610,9 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                             <Dropdown options={[
                                 DropdownOption('0.5', 'Very Slow'),
                                 DropdownOption('0.875', 'Slow'),
-                                DropdownOption('1.00', 'Normal'),
-                                DropdownOption('1.75', 'Fast'),
-                                DropdownOption('2', 'Very Fast')
+                                DropdownOption('1.0', 'Normal'),
+                                DropdownOption('2.0', 'Fast'),
+                                DropdownOption('3.0', 'Very Fast')
                             ]} setSelected={m_setReadingSpeed} buttonText={m_readingSpeed} dropdownSize='sm' useOptionsForButtonText={true}/>
                         </span>
                         <br/>

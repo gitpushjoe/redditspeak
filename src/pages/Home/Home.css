@@ -70,7 +70,7 @@ p {
     -o-border-radius: 1em;
 }
 
-.primary-text-container.main-state .primary-text {
+.primary-text {
     /* text-shadow: 0px 0px 5px black; */
     text-shadow:
     -3px -3px 0 #000,
