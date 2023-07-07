@@ -1,4 +1,4 @@
-export function spliceSentence(sentence: string, smallSentenceLength : number = 40, longSentenceLength : number = 100): string[][] {
+export function spliceSentence(sentence: string, smallSentenceLength  = 40, longSentenceLength  = 100): string[][] {
     sentence = sentence.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"').replace('&apos;', "'").replace('&nbsp;', ' ');
     if (sentence.length < smallSentenceLength) { // short sentence
         return [[sentence]];
@@ -7,14 +7,14 @@ export function spliceSentence(sentence: string, smallSentenceLength : number = 
     } else { // sentence cannot be displayed as a whole, should be split into multiple parts
         const result = [[]] as string[][];
         const spliced = splitByRegex(sentence, /([,;:]\s+|-\s|\.\.\.|\(|\)|--)/);
-        let chars = 0;
-        for (let splice of spliced) {
+        const chars = 0;
+        for (const splice of spliced) {
             const lastSentence = result[result.length - 1];
             if ((lastSentence ? lastSentence.join(' ').length : 0) + splice.length + chars < 100) {
                 result[result.length - 1].push(splice);
             } else {
                 let lastWords = '';
-                for (let word of splice.split(" ")) {
+                for (const word of splice.split(" ")) {
                     lastWords += word + ' ';
                     if (lastWords.length + chars > 80) {
                         result[result.length - 1].push(...spliceSentence(lastWords, 80, 200).flat());

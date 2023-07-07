@@ -45,7 +45,7 @@ const dummyPost = {
     stickied: false,
     selftext: '',
     subreddit: '',
-}
+};
 
 export function castPost(post: any): Post {
     return {
@@ -61,7 +61,7 @@ export function castPost(post: any): Post {
         stickied: post.stickied,
         selftext: post.selftext,
         subreddit: post.subreddit,
-    }
+    };
 }
 
 export function castCurrentPost(source: Post, data: any): CurrentPost {
@@ -78,10 +78,10 @@ export function castCurrentPost(source: Post, data: any): CurrentPost {
                 permalink: comment.data.permalink,
                 score: comment.data.score,
                 stickied: comment.data.stickied,
-            }
+            };
         })
-    }
-};
+    };
+}
 
 export function castRepliesToCurrentPost(replies: any): CurrentPost|null {
     if (!replies.data || !replies.data.children || replies.data.children[0].kind !== 't1') {
@@ -100,11 +100,11 @@ export function castRepliesToCurrentPost(replies: any): CurrentPost|null {
                 permalink: comment.data.permalink,
                 score: comment.data.score,
                 stickied: comment.data.stickied,
-            }
+            };
         })
-    }
+    };
 }
 
-export async function fetchPost(post: Post, count: number = 100, depth: number = 0): Promise<any> {
-    return fetch(`https://www.reddit.com/r/${post.subreddit}/comments/${post.id}.json?limit=${count}&depth=${depth}`)
+export async function fetchPost(post: Post, count = 100, depth = 0): Promise<any> {
+    return fetch(`https://www.reddit.com/r/${post.subreddit}/comments/${post.id}.json?limit=${count}&depth=${depth}`);
 }

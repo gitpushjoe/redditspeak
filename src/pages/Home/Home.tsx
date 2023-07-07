@@ -1,12 +1,10 @@
 import './Home.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js'
-import 'bootstrap/dist/css/bootstrap.min.css'
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import Author from './AuthorComponent/Author';
 import { useEffect, useRef, useState } from 'react';
 import { BsFillArrowRightSquareFill, BsPauseFill, BsPlayFill } from 'react-icons/bs';
 import { BiSolidHome, BiSolidInfoCircle } from 'react-icons/bi';
 import { Dropdown, DropdownOption } from './utils/DropdownComponent/Dropdown';
-import { GrReddit } from 'react-icons/gr';
 import { fetchPosts } from './utils/Fetch';
 import { castPost, Post, fetchPost, CurrentPost, castCurrentPost, castRepliesToCurrentPost } from './utils/Reddit';
 import speak from './utils/SpeechSynth';
@@ -14,13 +12,13 @@ import { splitIntoSentences, spliceSentence, abbrvNumber } from './utils/String'
 import PlaybackControls from './PlaybackComponent/PlaybackControls';
 import { RiSettings4Fill } from 'react-icons/ri';
 
-export default function Home() {
+export default function Home(props: {setBackgroundVideo : Function}) {
 
     enum State {
         MAIN,
         LOADING,
         ACTIVE
-    };
+    }
 
     const [mainText, setMainText] = useState<string>("r/");
     const [authorText, setAuthorText] = useState<string>("");
@@ -35,16 +33,19 @@ export default function Home() {
     const [playing, setPlaying] = useState<boolean>(true);
     const [indices, setIndices] = useState<number[]>([-1, 0, 0]); // [commentIndex, sentenceIndex, spliceIndex]
     const [authorColor, setAuthorColor] = useState<'gold'|'aqua'>('gold');
+    const [controlsContainerVisible, setControlsContainerVisible] = useState<boolean>(true);
 
-    const [searchSort, setSearchSort] = useState<string>('hot-null');
-    const [readerSetting, setReaderSetting] = useState<string>('Discussion');
-    const [searchBy, setSearchBy] = useState<'subreddit'|'post'>('subreddit');
-    const [commentsPerPost, setCommentsPerPost] = useState<number>(3);
-    const [readReplies, setReadReplies] = useState<string>('enabled');
-    const [voice, setVoice] = useState<string>('1');
-    const [readingSpeed, setReadingSpeed] = useState<string>('1.25');
-    const [volume, setVolume] = useState<string>('100');
+    const [searchSort, setSearchSort] = useState<string>(localStorage.getItem('config-searchSort') || 'hot-null');
+    const [readerSetting, setReaderSetting] = useState<string>(localStorage.getItem('config-readerSetting') || 'Discussion');
+    const [searchBy, setSearchBy] = useState<'subreddit'|'post'>(localStorage.getItem('config-searchBy') as 'subreddit'|'post' || 'subreddit');
+    const [commentsPerPost, setCommentsPerPost] = useState<number>(parseInt(localStorage.getItem('config-commentsPerPost') || '0'));
+    const [readReplies, setReadReplies] = useState<string>(localStorage.getItem('config-readReplies') || 'disabled');
+    const [voice, setVoice] = useState<string>(localStorage.getItem('config-voice') || '0');
+    const [readingSpeed, setReadingSpeed] = useState<string>(localStorage.getItem('config-readingSpeed') || '1.75');
+    const [volume, setVolume] = useState<string>(localStorage.getItem('config-volume') || '100');
+    const [backgroundVideo, setBackgroundVideo] = useState<string>(localStorage.getItem('config-backgroundVideo') || 'enabled');
 
+    // Modal Settings
     const [m_searchSort, m_setSearchSort] = useState<string>(searchSort);
     const [m_searchBy, m_setSearchBy] = useState<'subreddit'|'post'>(searchBy);
     const [m_commentsPerPost, m_setCommentsPerPost] = useState<number>(commentsPerPost);
@@ -62,13 +63,18 @@ export default function Home() {
         m_setVoice(voice);
         m_setReadingSpeed(readingSpeed);
         m_setVolume(volume);
-        m_setBackgroundVideo(m_backgroundVideo);
+        m_setBackgroundVideo(backgroundVideo);
     }
 
     function openModal() {
         setShowModal(() => true);
         setModalSettingsToDefault();
     }
+
+    useEffect(() => {
+        localStorage.setItem('config-searchSort', searchSort);
+        localStorage.setItem('config-readerSetting', readerSetting);
+    }, [searchSort, readerSetting]);
 
     function saveModal() {
         setSearchSort(m_searchSort);
@@ -78,21 +84,98 @@ export default function Home() {
         setVoice(m_voice);
         setReadingSpeed(m_readingSpeed);
         setVolume(m_volume);
-        setShowModal(() => false);
+        setShowModal(false);
+        setBackgroundVideo(m_backgroundVideo);
+
+        if (m_commentsPerPost === 0)
+            setReaderSetting('Post');
+        else if (m_commentsPerPost === 1)
+            setReaderSetting('Answer');
+        else if (m_commentsPerPost === 3)
+            setReaderSetting('Story');
+        else if (m_commentsPerPost === 300 && m_readReplies === 'disabled')
+            setReaderSetting('Discussion');
+        else if (m_commentsPerPost === 300 && m_readReplies === 'enabled')
+            setReaderSetting('Discourse');
+        else
+            setReaderSetting('Custom');
+        
+        localStorage.setItem('config-searchSort', m_searchSort);
+        localStorage.setItem('config-searchBy', m_searchBy);
+        localStorage.setItem('config-commentsPerPost', m_commentsPerPost.toString());
+        localStorage.setItem('config-readReplies', m_readReplies);
+        localStorage.setItem('config-voice', m_voice);
+        localStorage.setItem('config-readingSpeed', m_readingSpeed);
+        localStorage.setItem('config-volume', m_volume);
+        localStorage.setItem('config-backgroundVideo', m_backgroundVideo);
+
+        if (m_backgroundVideo === 'disabled') {
+            document.getElementById('youtube-iframe')!.style.display = 'none';
+        } else {
+            const videoUrl = m_backgroundVideoUrl.current! as string;
+            if (!videoUrl) return;
+            let videoId = videoUrl.split('=') as string[]|string;
+            if (videoId.length < 2) {
+                alert('Invalid URL! Please enter a valid URL.');
+                return;
+            }
+            videoId = videoId[1].slice(0, 11);
+            if (/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
+                console.log({videoId})
+                document.getElementById('youtube-iframe')!.style.display = 'block';
+                localStorage.setItem('config-backgroundVideoUrl', `https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true`);
+                props.setBackgroundVideo(`https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true`);
+            }
+        }
     }
 
+    document.addEventListener('show-container', () => {
+        setControlsContainerVisible(() => true);
+    });
+
+    document.addEventListener('hide-container', () => {
+        setControlsContainerVisible(() => false);
+    });
+
     const [showModal, setShowModal] = useState<boolean>(false);
-    const [commentsPerPostSlider, setCommentsPerPostSlider] = useState<number>(100);
-    const [volumeSlider, setVolumeSlider] = useState<number>(100);
+    const m_backgroundVideoUrl = useRef<string>('');
+
+    useEffect(() => {
+        switch (readerSetting) {
+            case 'Post': {
+                setCommentsPerPost(0);
+            }
+            break;
+            case 'Answer': {
+                setCommentsPerPost(1);
+            }
+            break;
+            case 'Story': {
+                setCommentsPerPost(3);
+            }
+            break;
+            case 'Discussion': {
+                setCommentsPerPost(300);
+                setReadReplies('disabled');
+            }
+            break;
+            case 'Discourse': {
+                setCommentsPerPost(300);
+                setReadReplies('enabled');
+            }
+            break;
+            case 'Custom': {
+                setShowModal(true);
+            }
+        }
+    }, [readerSetting]);
 
     let commentIndex = -2; // -2 = uninitialized, -1 = post, 0+ = comment
     let sentenceIndex = 0;
     let spliceIndex = 0;
     let wordsSpoken = 0;
 
-    const inputRef = useRef<any>(null);
-    const searchRef = useRef<any>(null);
-    const readerRef = useRef<any>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const searchSortMap = new Map<string, string>([
         ['hot-null', '🔥 HOT '],
@@ -103,12 +186,11 @@ export default function Home() {
         ['top-all', '📈 TOP (all time) ']
     ]);
 
-    function subredditChosen(e: any) {
+    function subredditChosen(e: React.FormEvent<HTMLFormElement>) { // Fetches the posts from the chosen subreddit
         if (utterance)
             utterance.onend = () => { };
         e.preventDefault();
         setState(() => State.LOADING);
-        // const searchSort = searchRef.current?.value!.split('-');
         if (searchBy === 'post') {
             const url = inputRef.current?.value!;
             if (!(url.startsWith('https://www.reddit.com/r/') || url.startsWith('https://old.reddit.com/r/'))) {
@@ -125,7 +207,7 @@ export default function Home() {
                     setPosts(() => [post]);
                     return post;
                 })
-                .then(post => fetchNewPostIndex(0, [post]))
+                .then(post => fetchNewPostIndex(0, [post]));
             return;
         }
         fetchPosts(inputRef.current?.value!, searchSort.split('-')[0], searchSort.split('-')[1])
@@ -136,8 +218,8 @@ export default function Home() {
                 setPosts(() => response);
                 return response;
             })
-            .then(response => fetchNewPostIndex(0, response))
-        return null;
+            .then(response => fetchNewPostIndex(0, response));
+        return;
     }
 
     function fetchNewPostIndex(index: number, postsList: Post[] | null = null) { // Fetches the post at the given index, and initializes it
@@ -147,24 +229,24 @@ export default function Home() {
             setState(() => State.LOADING);
         setPostIndex(() => index);
         if (commentsPerPost === 0) {
-            setTimeout(() => {setState(() => State.ACTIVE)}, 3);
+            setTimeout(() => {setState(() => State.ACTIVE);}, 3);
             initialize({postInfo: postsList[index], comments: []});
             return;
         }
-        fetchPost(postsList[index], commentsPerPost, readReplies ? 3 : 0)
+        fetchPost(postsList[index], commentsPerPost, readReplies === 'enabled' ? 3 : 0)
             .then(response => response.json())
             .then(response => {
-                let currentPost = castCurrentPost(postsList![index], response);
+                const currentPost = castCurrentPost(postsList![index], response);
                 currentPost.comments = currentPost.comments.filter(c => c.body !== '[deleted]' && !c.stickied && c.body);
                 initialize(currentPost);
-            })
+            });
     }
 
     function initialize(post: CurrentPost | null) { // Cut comments of the current post into sentence splices
         if (!post) { post = currentPost; }
         const sentences = splitIntoSentences(post!.postInfo.title + '\n' + post!.postInfo.selftext);
         const splicedSentences = [] as string[][];
-        for (let sentence of sentences) {
+        for (const sentence of sentences) {
             splicedSentences.push(...spliceSentence(sentence));
         }
         post!.postInfo.sentences = splicedSentences;
@@ -173,12 +255,11 @@ export default function Home() {
             if (!comment.body) break;
             const sentences = splitIntoSentences(comment.body);
             const splicedSentences = [] as string[][];
-            for (let sentence of sentences) {
+            for (const sentence of sentences) {
                 splicedSentences.push(...spliceSentence(sentence));
             }
-            // alert(splicedSentences.map(s => s.join('\n')).join('\n\n'));
             let reply = castRepliesToCurrentPost(comment.replies);
-            while (reply) {
+            while (reply && readReplies === 'enabled') {
                 splicedSentences.push(['<COMMENT METADATA>', reply.comments[0].author, reply.comments[0].score.toString()]);
                 splitIntoSentences(reply.comments[0].body).forEach((sentence, index) => {
                     if (index === 0) {
@@ -196,8 +277,7 @@ export default function Home() {
         setState(() => State.ACTIVE);
     }
 
-    function presentText(withAudio = true, incrementForMetadata = 0) { // Present the current sentence, and if withAudio, speak it
-        let metadataFlag = false;
+    function presentText(withAudio = true) { // Present the current sentence, and if withAudio, speak it
         if (commentIndex !== -2) {
             setIndices(() => [commentIndex, sentenceIndex, spliceIndex]);
         }
@@ -218,11 +298,10 @@ export default function Home() {
             setAuthorText(() => text);
             setAuthorColor(() => 'aqua');
             setAuthorVisible(() => true);
-            metadataFlag = true;
             sentence = sentence.slice(3);
         }
         if (spliceIndex === 0 && withAudio) {
-            const utterance = speak(sentence.join(''), [commentIndex, sentenceIndex, spliceIndex], changeReadingPos, speechSynthesis.getVoices()[parseInt(voice)], parseInt(readingSpeed), parseInt(volume)/100);
+            const utterance = speak(sentence.join(''), [commentIndex, sentenceIndex, spliceIndex], changeReadingPos, speechSynthesis.getVoices()[parseInt(voice)], parseFloat(readingSpeed), parseInt(volume)/100);
             wordsSpoken = -1;
             utterance.onboundary = (e) => { // add event listener to utterance to update spliceIndex when a word is spoken
                 const sentences = commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;
@@ -239,16 +318,16 @@ export default function Home() {
                         wordCount++;
                     }
                 }
-            }
+            };
             setUtterance(() => utterance);
         }
-        updateText(null, !metadataFlag);
+        updateText(null);
     }
 
-    const getCurrentPostOrComment = () => { return commentIndex === -1 ? currentPost!.postInfo : currentPost!.comments[commentIndex]; }
-    const getCurrentSentences = () => { return commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!; }
+    const getCurrentPostOrComment = () => { return commentIndex === -1 ? currentPost!.postInfo : currentPost!.comments[commentIndex]; };
+    const getCurrentSentences = () => { return commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!; };
 
-    function updateText(splice: number | null = null, updateAuthor = true) {
+    function updateText(splice: number | null = null) {
         if (splice !== null) { spliceIndex = splice; }
         let sentence: string[];
         if (commentIndex === -1) {
@@ -317,7 +396,7 @@ export default function Home() {
             return;
         }
         console.log({increment});
-        presentText(withAudio, increment === 0 ? 1 : increment);
+        presentText(withAudio);
         return;
     }
 
@@ -335,7 +414,7 @@ export default function Home() {
     function doPause() {
         setPlaying(() => false);
         if (utterance) {
-            utterance.onend = () => { };
+            utterance.onend = null;
         }
         document.dispatchEvent(new Event('pauseVideo'));
         speechSynthesis.cancel();
@@ -351,12 +430,12 @@ export default function Home() {
         sentenceIndex = 0;
         spliceIndex = 0;
         presentText(playing);
-    }, [currentPost])
+    }, [currentPost]);
 
     useEffect(doCancel, []);
 
     return <>
-        <div className="primary-container">
+        <div className={`primary-container`} style={{backgroundColor: (backgroundVideo === 'enabled' ? '#00000000' : '#112233'), cursor : (controlsContainerVisible ? 'default' : 'none')}}>
             <div className={`primary-text-container ${state === State.MAIN ? 'waiting-state' : 'main-state'}`}>
                 {state === State.MAIN ?
                     <>
@@ -378,7 +457,7 @@ export default function Home() {
                                     DropdownOption('top-month', '📈 TOP (month)'), 
                                     DropdownOption('top-year', '📈 TOP (year)'), 
                                     DropdownOption('top-all', '📈 TOP (all time)')]
-                                } setSelected={setSearchSort} buttonText={searchSortMap.get(searchSort)!} />
+                                } setSelected={setSearchSort} buttonText={searchSortMap.get(searchSort)} />
                         </span>
                         <br />
                         <span style={{zIndex: 2000, position: 'static'}}>
@@ -423,7 +502,7 @@ export default function Home() {
             </div>
         </div>
         {state !== State.LOADING &&
-            <div className="controls-container">
+            <div className={`controls-container ${controlsContainerVisible ? 'show-container' : 'hide-container'}`}>
                 {state === State.ACTIVE &&
                     <>
                         <PlaybackControls changeReadingPos={changeReadingPos} fetchNewPostIndex={fetchNewPostIndex} playing={playing} indices={indices} postIndex={postIndex} doPlay={doPlay} doPause={doPause} />
@@ -444,7 +523,7 @@ export default function Home() {
                 <div className="modal-content">
                     <div className="modal-header">
                         <h5 className="modal-title" id="settings-modal-label">Settings</h5>
-                        <button type="button" className="btn-close" data-dismiss="modal" aria-label="Close" onClick={() => { setReaderSetting(() => readerRef.current.value); setSearchSort(() => searchRef.current.value); }}></button>
+                        <button type="button" className="btn-close" data-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div className="modal-body">
                         <p className="subtitle">Search Setting: </p>
@@ -455,7 +534,7 @@ export default function Home() {
                             DropdownOption('top-month', '📈 TOP (month)'),
                             DropdownOption('top-year', '📈 TOP (year)'),
                             DropdownOption('top-all', '📈 TOP (all time)')
-                        ]} setSelected={setSearchSort} buttonText={searchSortMap.get(searchSort)!} />
+                        ]} setSelected={setSearchSort} buttonText={searchSortMap.get(searchSort)} />
                         <br />
                     </div>
                     <div className="modal-body">
@@ -480,7 +559,7 @@ export default function Home() {
                 <div className="modal-content">
                     <div className="modal-header">
                         <h2 className="modal-title" id="exampleModalLabel">Settings</h2>
-                        <button type="button" className="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true" onClick={() => {setShowModal(() => false)}}>&times;</span></button>
+                        <button type="button" className="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true" onClick={() => {setShowModal(() => false);}}>&times;</span></button>
                     </div>
                     <div className="modal-body">
                         <h4><strong>Search</strong></h4>
@@ -505,8 +584,8 @@ export default function Home() {
                         </span>
                         <br/>
                         <span>
-                            <p className='modal-option-name'>Num. Comments: </p>
-                            <input type="range" className="inline-block" placeholder="0" min="0" max="300" value={m_commentsPerPost} style={{ width: '30%', padding: '0'}} onChange={e => {m_setCommentsPerPost(() => parseInt(e.target.value))}}/>
+                            <p className='modal-option-name'># of Comments: </p>
+                            <input type="range" className="inline-block" placeholder="0" min="0" max="300" value={m_commentsPerPost} style={{ width: '30%', padding: '0'}} onChange={e => {m_setCommentsPerPost(() => parseInt(e.target.value));}}/>
                             <p className='inline-block modal-option-name' style={{paddingLeft: '0.2em'}}>{m_commentsPerPost}</p>
                         </span>
                         <br/>
@@ -522,23 +601,24 @@ export default function Home() {
                         <span>
                             <p className='modal-option-name'>Voice: </p>
                             <Dropdown options={
-                                speechSynthesis.getVoices().map((voice, index) => DropdownOption(index.toString(), voice.name.split(' - ')[0].replace('Microsoft ', '').replace('Google ', '')))
+                                speechSynthesis.getVoices().filter(voice => voice.name.indexOf('English') !== -1).map((voice, index) => DropdownOption(index.toString(), voice.name.split(' - ')[0].replace('Microsoft ', '').replace('Google ', '')))
                             } setSelected={m_setVoice} buttonText={m_voice} dropdownSize='sm' useOptionsForButtonText={true}/>
                         </span>
                         <br/>
                         <span>
                             <p className='modal-option-name'>Reading Speed: </p>
                             <Dropdown options={[
-                                DropdownOption('0.75', 'Slow'),
-                                DropdownOption('1.25', 'Normal'),
+                                DropdownOption('0.5', 'Very Slow'),
+                                DropdownOption('0.875', 'Slow'),
+                                DropdownOption('1.00', 'Normal'),
                                 DropdownOption('1.75', 'Fast'),
-                                DropdownOption('2.25', 'Very Fast')
+                                DropdownOption('2', 'Very Fast')
                             ]} setSelected={m_setReadingSpeed} buttonText={m_readingSpeed} dropdownSize='sm' useOptionsForButtonText={true}/>
                         </span>
                         <br/>
                         <span>
                             <p className='modal-option-name'>Volume: </p>
-                            <input type="range" className="inline-block" placeholder="100" min="0" max="100" value={m_volume} style={{ width: '30%', padding: '0'}} onChange={e => {m_setVolume(() => e.target.value)}}/>
+                            <input type="range" className="inline-block" placeholder="100" min="0" max="100" value={m_volume} style={{ width: '30%', padding: '0'}} onChange={e => {m_setVolume(() => e.target.value);}}/>
                             <p className='inline-block modal-option-name' style={{paddingLeft: '0.2em'}}>{m_volume}</p>
                         </span>
                         <br/><br/>
@@ -551,17 +631,19 @@ export default function Home() {
                             ]} setSelected={m_setBackgroundVideo} buttonText={m_backgroundVideo} dropdownSize='sm' useOptionsForButtonText={true}/>
                         </span>
                         <br/>
-                        <span>
+                        <span> {
+                            m_backgroundVideo === 'enabled' && <>
                             <p className='modal-option-name'>Video URL: </p>
-                            <input type="text" className="form-control" placeholder="(Leave empty for no change)" style={{ width: '60%', height: '1.8em', padding: '0', display: 'inline-block'}}/>
+                            <input type="text" className="form-control" placeholder="(Leave empty for no change)" onChange={e => m_backgroundVideoUrl.current = e.currentTarget.value!} style={{ width: '60%', height: '1.8em', padding: '0', display: 'inline-block'}}/>
+                            </>}
                         </span>
                     </div>
                     <div className="modal-footer">
-                        <button type="button" className="btn btn-secondary" data-dismiss="modal" onClick={() => {setShowModal(() => false)}}>Close</button>
+                        <button type="button" className="btn btn-secondary" data-dismiss="modal" onClick={() => {setShowModal(() => false);}}>Close</button>
                         <button type="button" className="btn btn-primary" onClick={saveModal}>Save changes</button>
                     </div>
                 </div>
             </div>
         </div>}
-    </>
-};
+    </>;
+}

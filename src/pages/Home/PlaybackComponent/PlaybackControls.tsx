@@ -27,5 +27,5 @@ export default function (props: { changeReadingPos: Function, fetchNewPostIndex:
         <BsSkipEndFill className={`icon ${playing ? 'unavailable' : ''}`} onClick={doFastFowardComment}/>
         <BsSkipForwardFill className={`icon ${playing ? 'unavailable' : ''}`} onClick={doFastFowrardPost}/>
         <br/>
-    </>
+    </>;
 }

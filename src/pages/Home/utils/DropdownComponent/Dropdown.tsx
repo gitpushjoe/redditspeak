@@ -16,7 +16,7 @@ export function Dropdown(props: { options: DropdownOptionType[], setSelected: Fu
     <div className="dropdown-menu" aria-labelledby="dropdownMenuButton">
         {
             options.map((option, index) => {
-                return <a className="dropdown-item" href="#" key={index} onClick={() => setSelected(option.value)}>{option.name}</a>
+                return <a className="dropdown-item" href="#" key={index} onClick={() => setSelected(option.value)}>{option.name}</a>;
             })
         }
     </div>

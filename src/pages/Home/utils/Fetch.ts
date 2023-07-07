@@ -5,5 +5,5 @@ export function fetchPosts(subreddit: string, sort: string, period: string): Pro
     } else {
         url = `https://www.reddit.com/r/${subreddit}/top.json?sort=top&limit=100&t=${period}`;
     }
-    return fetch(url)
+    return fetch(url);
 }

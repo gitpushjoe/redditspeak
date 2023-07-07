@@ -196,10 +196,10 @@ select {
     font-size: 100em;
 }
 
-.fix-dropdown {
+/* .fix-dropdown {
     position: absolute;
     bottom: 0.2em;
-}
+} */
 
 .inline-block {
     display: inline-block;
@@ -211,4 +211,21 @@ a {
     -moz-transform: translate(0%);
     -ms-transform: translate(0%);
     -o-transform: translate(0%);
+}
+
+.hide-container {
+    opacity: 0;
+    transition: 2s ease all;
+    -webkit-transition: 2s ease all;
+    -moz-transition: 2s ease all;
+    -ms-transition: 2s ease all;
+    -o-transition: 2s ease all;
+}
+
+.show-container {
+    opacity: 1;
+}
+
+.no-cursor {
+    cursor: none;
 }
