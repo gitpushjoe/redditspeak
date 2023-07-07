@@ -121,7 +121,6 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             }
             videoId = videoId[1].slice(0, 11);
             if (/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
-                console.log({videoId})
                 document.getElementById('youtube-iframe')!.style.display = 'block';
                 localStorage.setItem('config-backgroundVideoUrl', `https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true`);
                 props.setBackgroundVideo(`https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true`);
@@ -214,7 +213,6 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             .then(response => response.json())
             .then(response => {
                 response = response.data.children.map((post: any) => castPost(post.data)).filter((post: Post) => post.stickied === false);
-                console.log(response);
                 setPosts(() => response);
                 return response;
             })
@@ -293,7 +291,6 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             return;
         }
         if (sentence[0] === '<COMMENT METADATA>') {
-            console.log(`Metadata: ${sentence}`);
             const text = `u/${sentence[1]} ▲${abbrvNumber(parseInt(sentence[2]))}`;
             setAuthorText(() => text);
             setAuthorColor(() => 'aqua');
@@ -311,7 +308,6 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                 for (const splice in sentence) {
                     for (const _ in sentence[splice].split(' ').filter(Boolean)) {
                         if (wordCount === wordsSpoken) {
-                            // console.log(sentences[sentenceIndex].flat().join(' ').split(' ').filter(Boolean).slice(0, wordsSpoken).join(' '));
                             updateText(Number(splice));
                             return;
                         }
@@ -338,7 +334,6 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         if (sentence[0] === '<COMMENT METADATA>') {
             sentence = sentence.slice(3);
         } else {
-            console.log(`NO METADATA: ${sentence}`);
             if (sentenceIndex === 0)
                 setAuthorText(() => (commentIndex === -1 ? '[OP] ' : '') + 'u/' + getCurrentPostOrComment().author + '   ▲' + abbrvNumber(getCurrentPostOrComment().score));
             setAuthorVisible(() => sentenceIndex === 0);
@@ -395,7 +390,6 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             setState(State.LOADING);
             return;
         }
-        console.log({increment});
         presentText(withAudio);
         return;
     }
