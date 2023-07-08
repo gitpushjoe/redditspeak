@@ -34,6 +34,8 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     const [indices, setIndices] = useState<number[]>([-1, 0, 0]); // [commentIndex, sentenceIndex, spliceIndex]
     const [authorColor, setAuthorColor] = useState<'gold'|'aqua'>('gold');
     const [controlsContainerVisible, setControlsContainerVisible] = useState<boolean>(true);
+    const [placeholderSubreddit, setPlaceholderSubreddit] = useState<string>('' as string);
+    const [placeholderInterval, setPlaceholderInterval] = useState<number>(0); // used to prevent duplicate intervals
 
     const [searchSort, setSearchSort] = useState<string>(localStorage.getItem('config-searchSort') || 'hot-null');
     const [readerSetting, setReaderSetting] = useState<string>(localStorage.getItem('config-readerSetting') || 'Discussion');
@@ -44,6 +46,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     const [readingSpeed, setReadingSpeed] = useState<string>(localStorage.getItem('config-readingSpeed') || '1.0');
     const [volume, setVolume] = useState<string>(localStorage.getItem('config-volume') || '100');
     const [backgroundVideo, setBackgroundVideo] = useState<string>(localStorage.getItem('config-backgroundVideo') || 'enabled');
+    const [pausingAudioPausesVideo, setPausingAudioPausesVideo] = useState<boolean>(localStorage.getItem('config-pausingAudioPausesVideo') === 'true' ? true : false);
 
     // Modal Settings
     const [m_searchSort, m_setSearchSort] = useState<string>(searchSort);
@@ -54,6 +57,17 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     const [m_readingSpeed, m_setReadingSpeed] = useState<string>(readingSpeed);
     const [m_volume, m_setVolume] = useState<string>(volume);
     const [m_backgroundVideo, m_setBackgroundVideo] = useState<string>('enabled');
+    const [m_pausingAudioPausesVideo, m_setPausingAudioPausesVideo] = useState<boolean>(pausingAudioPausesVideo);
+
+    useEffect(() => {
+        if (placeholderInterval !== 0) clearInterval(placeholderInterval);
+        const interval = setInterval(() => {
+            const subreddits = ['writingprompts', 'trueoffmychest', 'explainlikeimfive', 'outoftheloop', 'todayilearned', 'showerthoughts', 'unpopularopinion', 'confession', 'askhistorians', 'NoStupidQuestions', 'AmItheAsshole', 'TwoXChromosomes', 'IAmA', 'changemyview', 'legaladvice', 'CasualConversation', 'AskReddit', 'AskWomen', 'offmychest', 'tooafraidtoask', 'relationship_advice', 'LifeProTips', 'AskMen', 'TIFU'];
+            if (state === State.MAIN) 
+                setPlaceholderSubreddit(subreddits[Date.now() / (9000) % subreddits.length | 0]);
+        }, 1000);
+        setPlaceholderInterval(interval);
+    }, []);
 
     function setModalSettingsToDefault() {
         m_setSearchSort(searchSort);
@@ -64,6 +78,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         m_setReadingSpeed(readingSpeed);
         m_setVolume(volume);
         m_setBackgroundVideo(backgroundVideo);
+        m_setPausingAudioPausesVideo(pausingAudioPausesVideo);
     }
 
     function openModal() {
@@ -86,6 +101,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         setVolume(m_volume);
         setShowModal(false);
         setBackgroundVideo(m_backgroundVideo);
+        setPausingAudioPausesVideo(m_pausingAudioPausesVideo);
 
         if (m_commentsPerPost === 0)
             setReaderSetting('Post');
@@ -108,10 +124,12 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         localStorage.setItem('config-readingSpeed', m_readingSpeed);
         localStorage.setItem('config-volume', m_volume);
         localStorage.setItem('config-backgroundVideo', m_backgroundVideo);
+        localStorage.setItem('config-pausingAudioPausesVideo', m_pausingAudioPausesVideo.toString());
 
         if (m_backgroundVideo === 'disabled') {
             document.getElementById('youtube-iframe')!.style.display = 'none';
         } else {
+            document.getElementById('youtube-iframe')!.style.display = 'block';
             const videoUrl = m_backgroundVideoUrl.current! as string;
             if (!videoUrl) return;
             let videoId = videoUrl.split('=') as string[]|string;
@@ -122,8 +140,8 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             videoId = videoId[1].slice(0, 11);
             if (/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
                 document.getElementById('youtube-iframe')!.style.display = 'block';
-                localStorage.setItem('config-backgroundVideoUrl', `https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true`);
-                props.setBackgroundVideo(`https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true`);
+                localStorage.setItem('config-backgroundVideoUrl', `https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true&rel=0`);
+                props.setBackgroundVideo(`https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true&rel=0`);
             }
         }
     }
@@ -198,7 +216,14 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                 return;
             }
             fetch(url + '.json')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        alert('Unable to find post! Please check the URL or try again later.');
+                        setState(() => State.MAIN);
+                        return;
+                    }
+                    return response.json();
+                })
                 .then(response => {
                     response = response[0].data.children[0].data;
                     const post  = castPost(response);
@@ -208,8 +233,25 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                 .then(post => fetchNewPostIndex(0, [post]));
             return;
         }
+        if (!inputRef.current?.value || !/^[a-zA-Z0-9-_]{3,21}$/.test(inputRef.current?.value!)) {
+            alert('Invalid subreddit name! Please enter a valid subreddit name.');
+            setState(() => State.MAIN);
+            return;
+        }
         fetchPosts(inputRef.current?.value!, searchSort.split('-')[0], searchSort.split('-')[1])
-            .then(response => response.json())
+            .catch(error => {
+                alert('Unable to find subreddit! Please check the name or try again later.');
+                setState(() => State.MAIN);
+                return;
+            })
+            .then(response => {
+                if (!response.ok) {
+                    alert('Unable to find subreddit! Please check the name or try again later.');
+                    setState(() => State.MAIN);
+                    return;
+                }
+                return response.json();
+            })
             .then(response => {
                 response = response.data.children.map((post: any) => castPost(post.data)).filter((post: Post) => post.stickied === false);
                 setPosts(() => response);
@@ -409,7 +451,8 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         if (utterance) {
             utterance.onend = null;
         }
-        document.dispatchEvent(new Event('pauseVideo'));
+        if (pausingAudioPausesVideo)
+            document.dispatchEvent(new Event('pauseVideo'));
         speechSynthesis.cancel();
     }
 
@@ -430,18 +473,19 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     return <>
         <div className={`primary-container`} style={{backgroundColor: (backgroundVideo === 'enabled' ? '#00000000' : '#112233'), cursor : (controlsContainerVisible ? 'default' : 'none')}}>
             <div>
+                {state === State.MAIN &&
                 <div style={{textAlign: 'center'}}>
                     <p className="text-white primary-text">redditSpeak</p>
                     <Author author="A text-to-speech reader for Reddit." visible={true} color={"white"}/>
                     <br/>
-                </div>
+                </div>}
             <div className={`primary-text-container ${state === State.MAIN ? 'waiting-state' : 'main-state'}`}>
                 {state === State.MAIN ?
                     <>
                         <form onSubmit={subredditChosen}>
                             <span>
                                 { searchBy === 'subreddit' && <h1 className="text-white" style={{ display: 'inline-block', paddingRight: '0.2em'}}>r/</h1> }
-                                <input type="text" className="form-control input-sm input-field" placeholder={searchBy === 'subreddit' ? 'askReddit' : 'https://www.reddit.com/r/...'} style={{ width: '55%', display: 'inline-block', margin: '0', boxShadow: '0 0 20px purple' }} ref={inputRef} />
+                                <input type="text" className="form-control input-sm input-field" placeholder={searchBy === 'subreddit' ? placeholderSubreddit : 'https://www.reddit.com/r/...'} style={{ width: '55%', display: 'inline-block', margin: '0', boxShadow: '0 0 20px purple' }} ref={inputRef} />
                                 <BsFillArrowRightSquareFill className="arrow" onClick={subredditChosen} />
                                 <br />
                             </span>
@@ -635,7 +679,11 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                             m_backgroundVideo === 'enabled' && <>
                             <p className='modal-option-name'>Video URL: </p>
                             <input type="text" className="form-control" placeholder="(Leave empty for no change)" onChange={e => m_backgroundVideoUrl.current = e.currentTarget.value!} style={{ width: '60%', height: '1.8em', padding: '0', display: 'inline-block'}}/>
-                            </>}
+                            <br/>
+                            <p className='modal-option-name'>Pause Button Pauses Video: </p>
+                            <input type="checkbox" className="inline-block" checked={m_pausingAudioPausesVideo} onChange={e => m_setPausingAudioPausesVideo(e.target.checked)}/>
+                            </>
+                            }
                         </span>
                     </div>
                     <div className="modal-footer">
