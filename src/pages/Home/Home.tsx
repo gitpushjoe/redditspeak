@@ -490,7 +490,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                                 <br />
                             </span>
                         </form>
-                        <span style={{zIndex: 0, position: 'static'}}>
+                        <span style={{zIndex: 0, position: 'static', display: 'inline-block'}}>
                             <p className="subtitle" style={{ display: 'inline-block' }}>Sort posts by: </p>
                             <Dropdown 
                                 options={[

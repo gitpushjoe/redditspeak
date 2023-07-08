@@ -2,6 +2,7 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+    background-color: black;
 }
 
 iframe {
@@ -16,4 +17,20 @@ iframe {
   -moz-transform: translate(-2px, -2px);
   -ms-transform: translate(-2px, -2px);
   -o-transform: translate(-2px, -2px);
+}
+
+@media (max-width: 900px) {
+  .iframe {
+    z-index: -2;
+  position: fixed;
+  display: none;
+    height: 102vh;
+    width: calc(100vh * (16 / 9));
+    left: 50%;
+    transform: translate(-2px, -2px) translateX(-50%)  ;
+    -webkit-transform: translate(-2px, -2px) translateX(-50%)  ;
+    -moz-transform: translate(-2px, -2px) translateX(-50%)  ;
+    -ms-transform: translate(-2px, -2px) translateX(-50%)  ;
+    -o-transform: translate(-2px, -2px) translateX(-50%)  ;
+}
 }
