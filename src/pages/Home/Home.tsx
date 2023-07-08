@@ -239,7 +239,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             return;
         }
         fetchPosts(inputRef.current?.value!, searchSort.split('-')[0], searchSort.split('-')[1])
-            .catch(error => {
+            .catch(_ => {
                 alert('Unable to find subreddit! Please check the name or try again later.');
                 setState(() => State.MAIN);
                 return;
