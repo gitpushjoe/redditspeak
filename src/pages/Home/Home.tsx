@@ -667,7 +667,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                             <Dropdown options={
                                 speechSynthesis.getVoices()
                                     .map((voice, index) => [index, voice] as [number, SpeechSynthesisVoice])    
-                                    .filter(item => item[1].name.indexOf('English') !== -1 || item[1].name.indexOf('DEFAULT') !== -1)
+                                    .filter(item => item[1].lang === 'en-US' || item[1].lang === 'en-GB')
                                     .map(item => {
                                         const [index, voice] = item as [number, SpeechSynthesisVoice];
                                         return DropdownOption(index.toString(), voice.name.split(' - ')[0].replace('Microsoft ', '').replace('Google ', '').replace('US Engl', '(unstable) US Engl').replace('UK Engl', '(unstable) UK Engl'))

@@ -1,4 +1,5 @@
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import './About.css';
 
 function About() {
     document.body.style.backgroundColor = '#101520';
@@ -13,7 +14,7 @@ function About() {
 
   <div className="row mt-5 d-flex justify-content-center">
     <div className="col-10 text-center py-3 ">
-      <p className="display-3 py-4 font-weight-bold text-info" style={{font: 'Roboto, sans serif;'}}>A text-to-speech reader for your favorite subreddits.</p>
+      <h1 className="py-4 text-lg-center font-weight-bold text-info" style={{font: 'Roboto, sans serif;'}}>A text-to-speech reader for your favorite subreddits.</h1>
       <p className="h3">Default background video from <a href="https://www.youtube.com/@bbswitzer">bbswitzer.</a></p>
       <p className="h3">Website created by <a href="https://github.com/gitpushjoe">gitpushjoe.</a></p>
       <p className="h3">Source code available <a href="https://github.com/gitpushjoe/redditspeak">here.</a></p>
