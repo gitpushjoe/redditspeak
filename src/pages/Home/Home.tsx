@@ -48,6 +48,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     const [volume, setVolume] = useState<string>(localStorage.getItem('config-volume') || '100');
     const [backgroundVideo, setBackgroundVideo] = useState<string>(localStorage.getItem('config-backgroundVideo') || 'enabled');
     const [pausingAudioPausesVideo, setPausingAudioPausesVideo] = useState<boolean>(localStorage.getItem('config-pausingAudioPausesVideo') === 'true' ? true : false);
+    const [androidBugFix, setAndroidBugFix] = useState<string>('disabled'); // used to fix a bug on android where the text gets "stuck" (caused by lack of support for onboundary event)
 
     // Modal Settings
     const [m_searchSort, m_setSearchSort] = useState<string>(searchSort);
@@ -59,6 +60,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     const [m_volume, m_setVolume] = useState<string>(volume);
     const [m_backgroundVideo, m_setBackgroundVideo] = useState<string>('enabled');
     const [m_pausingAudioPausesVideo, m_setPausingAudioPausesVideo] = useState<boolean>(pausingAudioPausesVideo);
+    const [m_androidBugFix, m_setAndroidBugFix] = useState<string>('disabled');
 
     useEffect(() => {
         if (placeholderInterval !== 0) clearInterval(placeholderInterval);
@@ -80,6 +82,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         m_setVolume(volume);
         m_setBackgroundVideo(backgroundVideo);
         m_setPausingAudioPausesVideo(pausingAudioPausesVideo);
+        m_setAndroidBugFix(androidBugFix);
     }
 
     function openModal() {
@@ -103,6 +106,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         setShowModal(false);
         setBackgroundVideo(m_backgroundVideo);
         setPausingAudioPausesVideo(m_pausingAudioPausesVideo);
+        setAndroidBugFix(m_androidBugFix);
 
         if (m_commentsPerPost === 0)
             setReaderSetting('Post');
@@ -126,6 +130,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         localStorage.setItem('config-volume', m_volume);
         localStorage.setItem('config-backgroundVideo', m_backgroundVideo);
         localStorage.setItem('config-pausingAudioPausesVideo', m_pausingAudioPausesVideo.toString());
+        localStorage.setItem('config-androidBugFix', m_androidBugFix);
 
         if (m_backgroundVideo === 'disabled') {
             document.getElementById('youtube-iframe')!.style.display = 'none';
@@ -292,7 +297,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         for (const i in post!.comments) {
             const comment = post!.comments[i];
             if (!comment.body) break;
-            const sentences = splitIntoSentences(comment.body);
+            const sentences = splitIntoSentences(comment.body.replace('&#x200B;', ''));
             const splicedSentences = [] as string[][];
             for (const sentence of sentences) {
                 splicedSentences.push(...spliceSentence(sentence));
@@ -300,7 +305,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             let reply = castRepliesToCurrentPost(comment.replies);
             while (reply && readReplies === 'enabled') {
                 splicedSentences.push(['<COMMENT METADATA>', reply.comments[0].author, reply.comments[0].score.toString(), reply.comments[0].permalink]);
-                splitIntoSentences(reply.comments[0].body).forEach((sentence, index) => {
+                splitIntoSentences(reply.comments[0].body.replace('&#x200B;', '')).forEach((sentence, index) => {
                     if (index === 0) {
                         splicedSentences[splicedSentences.length - 1].push(...spliceSentence(sentence)[0]);
                         splicedSentences.push(...spliceSentence(sentence).slice(1));
@@ -312,6 +317,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             }
             post!.comments[i].sentences = splicedSentences;
         }
+        console.log(post);
         if (post) setCurrentPost(() => post);
         setState(() => State.ACTIVE);
     }
@@ -339,7 +345,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             setCurrentPermalink(() => sentence[3]);
             sentence = sentence.slice(4);
         }
-        if (spliceIndex === 0 && withAudio) {
+        if (withAudio) {
             const utterance = speak(sentence.join(''), changeReadingPos, speechSynthesis.getVoices()[parseInt(voice)], parseFloat(readingSpeed), parseInt(volume)/100);
             wordsSpoken = -1;
             utterance.onboundary = (e) => { // add event listener to utterance to update spliceIndex when a word is spoken
@@ -387,6 +393,12 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             setMainText(() => sentence[0]);
             setPostText(() => '');
         } else {
+            if (androidBugFix === 'enabled') {
+            setPrevText(() => '');
+            setMainText(() => sentence.join(''));
+            setPostText(() => '');
+            return;
+            }
             if (sentence.join('').length > 100) {
                 setPrevText(() => '');
                 setMainText(() => sentence[spliceIndex]);
@@ -410,7 +422,10 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         }
         const sentences = getCurrentSentences();
         if (incrementType === 'sentence') sentenceIndex += increment;
-        if (incrementType === 'comment') commentIndex += increment;
+        if (incrementType === 'comment') {
+            commentIndex += increment;
+            sentenceIndex = 0;
+        }
         spliceIndex = 0;
 
         if (sentenceIndex < 0) {
@@ -650,7 +665,13 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                         <span>
                             <p className='modal-option-name'>Voice: </p>
                             <Dropdown options={
-                                speechSynthesis.getVoices().filter(voice => voice.name.indexOf('English') !== -1).slice(0, 5).map((voice, index) => DropdownOption(index.toString(), voice.name.split(' - ')[0].replace('Microsoft ', '').replace('Google ', '').replace('U', '(unstable) U')))
+                                speechSynthesis.getVoices()
+                                    .map((voice, index) => [index, voice] as [number, SpeechSynthesisVoice])    
+                                    .filter(item => item[1].name.indexOf('English') !== -1 || item[1].name.indexOf('DEFAULT') !== -1)
+                                    .map(item => {
+                                        const [index, voice] = item as [number, SpeechSynthesisVoice];
+                                        return DropdownOption(index.toString(), voice.name.split(' - ')[0].replace('Microsoft ', '').replace('Google ', '').replace('US Engl', '(unstable) US Engl').replace('UK Engl', '(unstable) UK Engl'))
+                                    })
                             } setSelected={m_setVoice} buttonText={m_voice} dropdownSize='sm' useOptionsForButtonText={true}/>
                         </span>
                         <br/>
@@ -669,6 +690,14 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                             <p className='modal-option-name'>Volume: </p>
                             <input type="range" className="inline-block" placeholder="100" min="0" max="100" value={m_volume} style={{ width: '30%', padding: '0'}} onChange={e => {m_setVolume(() => e.target.value);}}/>
                             <p className='inline-block modal-option-name' style={{paddingLeft: '0.2em'}}>{m_volume}</p>
+                        </span>
+                        <br />
+                        <span>
+                            <p className='modal-option-name'>Fix "Stuck Text" on Android: </p>
+                            <Dropdown options={[
+                                DropdownOption('enabled', 'Enabled (Less Features)'),
+                                DropdownOption('disabled', 'Disabled'),
+                            ]} setSelected={m_setAndroidBugFix} buttonText={m_androidBugFix} dropdownSize='sm' useOptionsForButtonText={true}/>
                         </span>
                         <br/><br/>
                         <h4><strong>Background</strong></h4>

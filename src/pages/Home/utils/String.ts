@@ -35,9 +35,13 @@ export function splitByRegex(inp: string, regex: RegExp): string[] {
 }
 
 export function fixRegexOutput(inp: string[]): string[] {
+    if (inp.length >= 2 && inp[0].length === 1) {
+        inp[1] = inp[0] + inp[1];
+        inp.shift();
+    }
     return inp.reduce((acc: string[], curr, index, array) => {
-        if (curr.startsWith('. ') || curr.startsWith(', '))
-            curr = curr.slice(2);
+        // if (curr.startsWith('. ') || curr.startsWith(', '))
+        //     curr = curr.slice(2);
         if (index % 2 === 0) {
           const nextChar = (array[index + 1] || '');
           if (nextChar !== '(') {

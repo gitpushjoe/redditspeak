@@ -19,7 +19,7 @@ p {
 .primary-text,.secondary-text {
     margin: 0;
     padding: 0;
-    line-height: 1.3em;
+    line-height: 1.225em;
 }
 
 .secondary-text {
@@ -52,6 +52,7 @@ p {
 
 .primary-text-container {
     width: 55vw;
+    min-width: 55vh;
     box-sizing: border-box;
     text-align: center;
     font-size: 1.1em;
@@ -232,10 +233,23 @@ a {
 
 @media (max-width: 768px) {
     .primary-text,.secondary-text {
-      font-size: 8vw; /* Adjusted font size for mobile */
+      font-size: 3.5vh; /* Adjusted font size for mobile */
+      line-height: 3.8vh;
+    }
+    .primary-text {
+        text-shadow:
+    -2px -2px 0 #000,
+     0   -2px 0 #000,
+     2px -2px 0 #000,
+     2px  0   0 #000,
+     2px  2px 0 #000,
+     0    2px 0 #000,
+    -2px  2px 0 #000,
+    -2px  0   0 #000,
+    0 0 15px #000;
     }
     .author {
-        font-size: 2vw; /* Adjusted font size for mobile */
+        font-size: 2vh; /* Adjusted font size for mobile */
     }
     .subtitle {
         font-size: 20px; /* Adjusted font size for mobile */
@@ -251,7 +265,8 @@ a {
     }
 
     .primary-text-container.main-state {
-        width: 90vw;
+        width: 80vw;
+        min-width: 80vw;
     }
 
 
@@ -265,5 +280,9 @@ a {
         margin: 0 0.5em;
         cursor: pointer;
         color: white;
+    }
+    
+    .modal-option-name {
+        font-size: 2.25vh;
     }
   }
