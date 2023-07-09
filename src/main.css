@@ -2,21 +2,20 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background-color: black;
 }
 
 iframe {
   z-index: -2;
   position: fixed;
   top: 0;
-  left: 0;
+  left: 50%;
   width: 102vw;
   height: calc(100vw / (16 / 9));
-  transform: translate(-2px, -2px);
-  -webkit-transform: translate(-2px, -2px);
-  -moz-transform: translate(-2px, -2px);
-  -ms-transform: translate(-2px, -2px);
-  -o-transform: translate(-2px, -2px);
+  transform: translate(-2px, -2px) translateX(-50%);
+  -webkit-transform: translate(-2px, -2px) translateX(-50%);
+  -moz-transform: translate(-2px, -2px) translateX(-50%);
+  -ms-transform: translate(-2px, -2px) translateX(-50%);
+  -o-transform: translate(-2px, -2px) translateX(-50%);
 }
 
 @media (max-width: 900px) {

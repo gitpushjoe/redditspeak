@@ -36,6 +36,8 @@ export function splitByRegex(inp: string, regex: RegExp): string[] {
 
 export function fixRegexOutput(inp: string[]): string[] {
     return inp.reduce((acc: string[], curr, index, array) => {
+        if (curr.startsWith('. ') || curr.startsWith(', '))
+            curr = curr.slice(2);
         if (index % 2 === 0) {
           const nextChar = (array[index + 1] || '');
           if (nextChar !== '(') {

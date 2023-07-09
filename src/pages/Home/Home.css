@@ -232,21 +232,16 @@ a {
 
 @media (max-width: 768px) {
     .primary-text,.secondary-text {
-      font-size: 35px; /* Adjusted font size for mobile */
+      font-size: 8vw; /* Adjusted font size for mobile */
+    }
+    .author {
+        font-size: 2vw; /* Adjusted font size for mobile */
     }
     .subtitle {
         font-size: 20px; /* Adjusted font size for mobile */
         display: inline-block;
         margin: .2em 0;
     }
-    /* .fix-dropdown {
-        display: inline-block;
-        transform: scale(90%)    ;
-        -webkit-transform: scale(90%)    ;
-        -moz-transform: scale(90%)    ;
-        -ms-transform: scale(90%)    ;
-        -o-transform: scale(90%)    ;
-} */
     .primary-text-container.waiting-state {
         width: 100vw;
         box-sizing: border-box;

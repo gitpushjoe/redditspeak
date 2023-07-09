@@ -36,6 +36,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     const [controlsContainerVisible, setControlsContainerVisible] = useState<boolean>(true);
     const [placeholderSubreddit, setPlaceholderSubreddit] = useState<string>('' as string);
     const [placeholderInterval, setPlaceholderInterval] = useState<number>(0); // used to prevent duplicate intervals
+    const [currentPermalink, setCurrentPermalink] = useState<string>('' as string);
 
     const [searchSort, setSearchSort] = useState<string>(localStorage.getItem('config-searchSort') || 'hot-null');
     const [readerSetting, setReaderSetting] = useState<string>(localStorage.getItem('config-readerSetting') || 'Discussion');
@@ -134,10 +135,9 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             if (!videoUrl) return;
             let videoId = videoUrl.split('=') as string[]|string;
             if (videoId.length < 2) {
-                alert('Invalid URL! Please enter a valid URL.');
-                return;
+                videoId = videoUrl.replace('watch?v=', '').split('/') as string[]|string;
             }
-            videoId = videoId[1].slice(0, 11);
+            videoId = videoId[videoId.length - 1].slice(0, 11);
             if (/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
                 document.getElementById('youtube-iframe')!.style.display = 'block';
                 localStorage.setItem('config-backgroundVideoUrl', `https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true&rel=0`);
@@ -299,7 +299,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             }
             let reply = castRepliesToCurrentPost(comment.replies);
             while (reply && readReplies === 'enabled') {
-                splicedSentences.push(['<COMMENT METADATA>', reply.comments[0].author, reply.comments[0].score.toString()]);
+                splicedSentences.push(['<COMMENT METADATA>', reply.comments[0].author, reply.comments[0].score.toString(), reply.comments[0].permalink]);
                 splitIntoSentences(reply.comments[0].body).forEach((sentence, index) => {
                     if (index === 0) {
                         splicedSentences[splicedSentences.length - 1].push(...spliceSentence(sentence)[0]);
@@ -336,14 +336,15 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             setAuthorText(() => text);
             setAuthorColor(() => 'aqua');
             setAuthorVisible(() => true);
-            sentence = sentence.slice(3);
+            setCurrentPermalink(() => sentence[3]);
+            sentence = sentence.slice(4);
         }
         if (spliceIndex === 0 && withAudio) {
             const utterance = speak(sentence.join(''), changeReadingPos, speechSynthesis.getVoices()[parseInt(voice)], parseFloat(readingSpeed), parseInt(volume)/100);
             wordsSpoken = -1;
             utterance.onboundary = (e) => { // add event listener to utterance to update spliceIndex when a word is spoken
                 const sentences = commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;
-                const sentence = sentences[sentenceIndex][0] === '<COMMENT METADATA>' ? sentences[sentenceIndex].slice(3) : sentences[sentenceIndex];
+                const sentence = sentences[sentenceIndex][0] === '<COMMENT METADATA>' ? sentences[sentenceIndex].slice(4) : sentences[sentenceIndex];
                 let wordCount = 0;
                 if (e.name === 'word') wordsSpoken++;
                 for (const splice in sentence) {
@@ -373,12 +374,13 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             sentence = currentPost!.comments[commentIndex].sentences![sentenceIndex];
         }
         if (sentence[0] === '<COMMENT METADATA>') {
-            sentence = sentence.slice(3);
+            sentence = sentence.slice(4);
         } else {
             if (sentenceIndex === 0)
                 setAuthorText(() => (commentIndex === -1 ? '[OP] ' : '') + 'u/' + getCurrentPostOrComment().author + '   ▲' + abbrvNumber(getCurrentPostOrComment().score));
             setAuthorVisible(() => sentenceIndex === 0);
             setAuthorColor(() => 'gold');
+            setCurrentPermalink(() => getCurrentPostOrComment().permalink);
         }
         if (sentence.length === 1) {
             setPrevText(() => '');
@@ -531,7 +533,10 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                     : state === State.LOADING ?
                         <p className="primary-text">Loading...</p>
                         : state === State.ACTIVE ?
-                            <>
+                            <div style={{cursor: 'pointer'}} onClick={() => {
+                                if (!playing && currentPermalink !== '')
+                                    window.open('https://www.reddit.com' + currentPermalink, '_blank');
+                            }}>
                                 <Author author={authorText} visible={authorVisible} color={authorColor} />
                                 <p>
                                     <mark className="secondary-text">{prevText}</mark>
@@ -539,7 +544,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                                     <mark className="secondary-text">{postText}</mark>
                                 </p>
                                 <Author author="---" visible={false} />
-                            </>
+                            </div>
                             : null
                 }
             </div>
@@ -558,7 +563,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                         <BsPauseFill className="icon" onClick={doPause}/> : 
                         <BsPlayFill className="icon" onClick={doPlay}/>
                     ) : null}
-                <BiSolidInfoCircle className="icon" />
+                <BiSolidInfoCircle className="icon" onClick={() => {window.location.replace('https://www.redditspeak.com/about')}}/>
             </div>}
 
         <div className="modal fade" id="settings-modal" tabIndex={-1} aria-labelledby="settings-modal-label" aria-hidden="true">

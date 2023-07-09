@@ -10,3 +10,9 @@
 .invisible {
     visibility: hidden;
 }
+
+@media screen and (max-width: 768px) {
+    .author {
+        font-size: 6.5vw;
+    }
+}
