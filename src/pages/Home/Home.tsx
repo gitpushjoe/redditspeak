@@ -6,11 +6,12 @@ import { BsFillArrowRightSquareFill, BsPauseFill, BsPlayFill } from 'react-icons
 import { BiSolidHome, BiSolidInfoCircle } from 'react-icons/bi';
 import { Dropdown, DropdownOption } from './utils/DropdownComponent/Dropdown';
 import { fetchPosts } from './utils/Fetch';
-import { castPost, Post, fetchPost, CurrentPost, castCurrentPost, castRepliesToCurrentPost } from './utils/Reddit';
+import { castPost, Post, fetchPost, CurrentPost, castCurrentPost, castRepliesToCurrentPost, acronymOffset, expandAcronyms } from './utils/Reddit';
 import speak from './utils/SpeechSynth';
 import { splitIntoSentences, spliceSentence, abbrvNumber } from './utils/String';
 import PlaybackControls from './PlaybackComponent/PlaybackControls';
 import { RiSettings4Fill } from 'react-icons/ri';
+import { useLocation } from 'react-router-dom';
 
 export default function Home(props: {setBackgroundVideo : Function}) {
 
@@ -151,6 +152,23 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         }
     }
 
+    const params = useLocation();
+
+    useEffect(() => {
+        const path = params.pathname.split('/');
+        if (path.length < 3) return;
+        if (path[1] !== 'r') return;
+        if (path.length === 3) {
+            inputRef.current!.value = path[2];
+            subredditChosen(null, 'subreddit');
+            return;
+        }
+        if (path.length >= 5 && path[3] === 'comments') {
+            inputRef.current!.value = `https://www.reddit.com/r/${path[2]}/comments/${path[4]}`;
+            subredditChosen(null, 'post');
+        }
+    }, [params]);
+
     document.addEventListener('show-container', () => {
         setControlsContainerVisible(() => true);
     });
@@ -208,12 +226,13 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         ['top-all', '📈 TOP (all time) ']
     ]);
 
-    function subredditChosen(e: React.FormEvent<HTMLFormElement>) { // Fetches the posts from the chosen subreddit
+    function subredditChosen(e: React.FormEvent<HTMLFormElement>|null = null, forceSearchBy: string = "") { // Fetches the posts from the chosen subreddit
         if (utterance)
             utterance.onend = () => { };
-        e.preventDefault();
+        e?.preventDefault();
         setState(() => State.LOADING);
-        if (searchBy === 'post') {
+        const searchMethod = forceSearchBy || searchBy;
+        if (searchMethod === 'post') {
             const url = inputRef.current?.value!;
             if (!(url.startsWith('https://www.reddit.com/r/') || url.startsWith('https://old.reddit.com/r/'))) {
                 alert('Invalid URL! Please enter a valid URL.');
@@ -346,8 +365,8 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             sentence = sentence.slice(4);
         }
         if (withAudio) {
-            const utterance = speak(sentence.join(''), changeReadingPos, speechSynthesis.getVoices()[parseInt(voice)], parseFloat(readingSpeed), parseInt(volume)/100);
-            wordsSpoken = -1;
+            const utterance = speak(expandAcronyms(sentence.join('')), changeReadingPos, speechSynthesis.getVoices()[parseInt(voice)], parseFloat(readingSpeed), parseInt(volume)/100);
+            wordsSpoken = -1 - acronymOffset(sentence.join(''));
             utterance.onboundary = (e) => { // add event listener to utterance to update spliceIndex when a word is spoken
                 const sentences = commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;
                 const sentence = sentences[sentenceIndex][0] === '<COMMENT METADATA>' ? sentences[sentenceIndex].slice(4) : sentences[sentenceIndex];
@@ -474,6 +493,12 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     }
 
     function doCancel() {
+        setTimeout(() => {
+            if (currentPost && currentPost.postInfo.subreddit && searchBy && searchBy === 'subreddit' && inputRef.current)
+                inputRef.current!.value = currentPost.postInfo.subreddit;
+            else if (currentPost && currentPost.postInfo.permalink && searchBy && searchBy === 'post' && inputRef.current)
+                inputRef.current!.value = currentPost.postInfo.permalink;
+        }, 5);
         setState(() => State.MAIN);
         doPause();
     }
