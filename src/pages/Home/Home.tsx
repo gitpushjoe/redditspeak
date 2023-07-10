@@ -288,10 +288,10 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     function fetchNewPostIndex(index: number, postsList: Post[] | null = null) { // Fetches the post at the given index, and initializes it
         postsList = postsList !== null ? postsList : posts;
         index = Math.min(Math.max(index, 0), postsList.length - 1);
-        if (commentsPerPost !== 0) 
+        if (parseInt(localStorage.getItem('config-commentsPerPost') || '300') !== 0) // solves useEffect race conditions
             setState(() => State.LOADING);
         setPostIndex(() => index);
-        if (commentsPerPost === 0) {
+        if (parseInt(localStorage.getItem('config-commentsPerPost') || '300') === 0) {
             setTimeout(() => {setState(() => State.ACTIVE);}, 3);
             initialize({postInfo: postsList[index], comments: []});
             return;

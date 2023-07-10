@@ -130,6 +130,7 @@ export const acronyms = [
     ['IANAD', 'I am not a doctor '],
     ['DYK', 'Did you know '],
     ['PSA', 'Public service announcement '],
+    ['LPT', 'Life pro tip '],
 ];
 
 export function expandAcronyms(inp: string): string {
