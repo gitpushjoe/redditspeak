@@ -1,8 +1,8 @@
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import './About.css';
 
 function About() {
     document.body.style.backgroundColor = '#101520';
+    document.body.style.overflowY = 'scroll';
   return (
     <div className="container col-10 bg-black">
   <nav className="navbar rounded navbar-expand-lg my-4 col-12">

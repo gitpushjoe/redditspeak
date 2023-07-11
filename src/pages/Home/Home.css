@@ -1,3 +1,7 @@
+body {
+    overflow: hidden;
+}
+
 p {
     color: lightslategray;
     font-family: 'Roboto', sans-serif;

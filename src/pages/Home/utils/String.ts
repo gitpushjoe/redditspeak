@@ -88,3 +88,9 @@ export function abbrvNumber(num : number) : string {
     }
     return '';
 }
+
+export function replaceLinks(inp: string): string {
+    return inp.replace(/https?:\/\/(?:www\.)?((\w|\.)+)(?:\/(?:\S*))/g, ' Link to $1 ')
+        .replace(/ Link to (\w+)\.(\w+)\.(\w+) /g, ' Link to $1 dot $2 dot $3')
+        .replace(/ Link to (\w+)\.(\w+) /g, ' Link to $1 dot $2')
+}

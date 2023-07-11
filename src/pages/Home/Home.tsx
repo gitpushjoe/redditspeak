@@ -8,12 +8,12 @@ import { Dropdown, DropdownOption } from './utils/DropdownComponent/Dropdown';
 import { fetchPosts } from './utils/Fetch';
 import { castPost, Post, fetchPost, CurrentPost, castCurrentPost, castRepliesToCurrentPost, acronymOffset, expandAcronyms } from './utils/Reddit';
 import speak from './utils/SpeechSynth';
-import { splitIntoSentences, spliceSentence, abbrvNumber } from './utils/String';
+import { splitIntoSentences, spliceSentence, abbrvNumber, replaceLinks } from './utils/String';
 import PlaybackControls from './PlaybackComponent/PlaybackControls';
 import { RiSettings4Fill } from 'react-icons/ri';
 import { useLocation } from 'react-router-dom';
 
-export default function Home(props: {setBackgroundVideo : Function}) {
+export default function Home(props: { setBackgroundVideo: Function }) {
 
     enum State {
         MAIN,
@@ -33,7 +33,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     const [utterance, setUtterance] = useState<SpeechSynthesisUtterance | null>(null);
     const [playing, setPlaying] = useState<boolean>(true);
     const [indices, setIndices] = useState<number[]>([-1, 0, 0]); // [commentIndex, sentenceIndex, spliceIndex]
-    const [authorColor, setAuthorColor] = useState<'gold'|'aqua'>('gold');
+    const [authorColor, setAuthorColor] = useState<'gold' | 'aqua'>('gold');
     const [controlsContainerVisible, setControlsContainerVisible] = useState<boolean>(true);
     const [placeholderSubreddit, setPlaceholderSubreddit] = useState<string>('' as string);
     const [placeholderInterval, setPlaceholderInterval] = useState<number>(0); // used to prevent duplicate intervals
@@ -41,7 +41,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
 
     const [searchSort, setSearchSort] = useState<string>(localStorage.getItem('config-searchSort') || 'hot-null');
     const [readerSetting, setReaderSetting] = useState<string>(localStorage.getItem('config-readerSetting') || 'Discussion');
-    const [searchBy, setSearchBy] = useState<'subreddit'|'post'>(localStorage.getItem('config-searchBy') as 'subreddit'|'post' || 'subreddit');
+    const [searchBy, setSearchBy] = useState<'subreddit' | 'post'>(localStorage.getItem('config-searchBy') as 'subreddit' | 'post' || 'subreddit');
     const [commentsPerPost, setCommentsPerPost] = useState<number>(parseInt(localStorage.getItem('config-commentsPerPost') || '0'));
     const [readReplies, setReadReplies] = useState<string>(localStorage.getItem('config-readReplies') || 'disabled');
     const [voice, setVoice] = useState<string>(localStorage.getItem('config-voice') || '0');
@@ -53,7 +53,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
 
     // Modal Settings
     const [m_searchSort, m_setSearchSort] = useState<string>(searchSort);
-    const [m_searchBy, m_setSearchBy] = useState<'subreddit'|'post'>(searchBy);
+    const [m_searchBy, m_setSearchBy] = useState<'subreddit' | 'post'>(searchBy);
     const [m_commentsPerPost, m_setCommentsPerPost] = useState<number>(commentsPerPost);
     const [m_readReplies, m_setReadReplies] = useState<string>(readReplies);
     const [m_voice, m_setVoice] = useState<string>(voice);
@@ -67,7 +67,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         if (placeholderInterval !== 0) clearInterval(placeholderInterval);
         const interval = setInterval(() => {
             const subreddits = ['writingprompts', 'trueoffmychest', 'explainlikeimfive', 'outoftheloop', 'todayilearned', 'showerthoughts', 'unpopularopinion', 'confession', 'askhistorians', 'NoStupidQuestions', 'AmItheAsshole', 'TwoXChromosomes', 'IAmA', 'changemyview', 'legaladvice', 'CasualConversation', 'AskReddit', 'AskWomen', 'offmychest', 'tooafraidtoask', 'relationship_advice', 'LifeProTips', 'AskMen', 'TIFU'];
-            if (state === State.MAIN) 
+            if (state === State.MAIN)
                 setPlaceholderSubreddit(subreddits[Date.now() / (9000) % subreddits.length | 0]);
         }, 1000);
         setPlaceholderInterval(interval);
@@ -121,7 +121,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             setReaderSetting('Discourse');
         else
             setReaderSetting('Custom');
-        
+
         localStorage.setItem('config-searchSort', m_searchSort);
         localStorage.setItem('config-searchBy', m_searchBy);
         localStorage.setItem('config-commentsPerPost', m_commentsPerPost.toString());
@@ -139,15 +139,17 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             document.getElementById('youtube-iframe')!.style.display = 'block';
             const videoUrl = m_backgroundVideoUrl.current! as string;
             if (!videoUrl) return;
-            let videoId = videoUrl.split('=') as string[]|string;
-            if (videoId.length < 2) {
-                videoId = videoUrl.replace('watch?v=', '').split('/') as string[]|string;
+            let videoId = videoUrl.split('=') as string[] | string;
+            if (videoId.length < 2 || videoUrl.includes('youtu.be')) {
+                videoId = videoUrl.replace('watch?v=', '').split('/') as string[] | string;
+                videoId = videoId[videoId.length - 1].slice(0, 11);
+            } else {
+                videoId = videoId[1].slice(0, 11);
             }
-            videoId = videoId[videoId.length - 1].slice(0, 11);
             if (/^[a-zA-Z0-9-_]{11}$/.test(videoId)) {
                 document.getElementById('youtube-iframe')!.style.display = 'block';
-                localStorage.setItem('config-backgroundVideoUrl', `https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true&rel=0`);
-                props.setBackgroundVideo(`https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true&rel=0`);
+                localStorage.setItem('config-backgroundVideoUrl', `https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true&rel=0&modestbranding=0&autoplay=1&loop=1&controls=0`);
+                props.setBackgroundVideo(`https://www.youtube.com/embed/${videoId}?enablejsapi=1&mute=true&rel=0&modestbranding=0&autoplay=1&loop=1&controls=0`);
             }
         }
     }
@@ -185,25 +187,25 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             case 'Post': {
                 setCommentsPerPost(0);
             }
-            break;
+                break;
             case 'Answer': {
                 setCommentsPerPost(1);
             }
-            break;
+                break;
             case 'Story': {
                 setCommentsPerPost(3);
             }
-            break;
+                break;
             case 'Discussion': {
                 setCommentsPerPost(300);
                 setReadReplies('disabled');
             }
-            break;
+                break;
             case 'Discourse': {
                 setCommentsPerPost(300);
                 setReadReplies('enabled');
             }
-            break;
+                break;
             case 'Custom': {
                 setShowModal(true);
             }
@@ -226,7 +228,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
         ['top-all', '📈 TOP (all time) ']
     ]);
 
-    function subredditChosen(e: React.FormEvent<HTMLFormElement>|null = null, forceSearchBy: string = "") { // Fetches the posts from the chosen subreddit
+    function subredditChosen(e: React.FormEvent<HTMLFormElement> | null = null, forceSearchBy: string = "") { // Fetches the posts from the chosen subreddit
         if (utterance)
             utterance.onend = () => { };
         e?.preventDefault();
@@ -250,7 +252,7 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                 })
                 .then(response => {
                     response = response[0].data.children[0].data;
-                    const post  = castPost(response);
+                    const post = castPost(response);
                     setPosts(() => [post]);
                     return post;
                 })
@@ -292,8 +294,8 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             setState(() => State.LOADING);
         setPostIndex(() => index);
         if (parseInt(localStorage.getItem('config-commentsPerPost') || '300') === 0) {
-            setTimeout(() => {setState(() => State.ACTIVE);}, 3);
-            initialize({postInfo: postsList[index], comments: []});
+            setTimeout(() => { setState(() => State.ACTIVE); }, 3);
+            initialize({ postInfo: postsList[index], comments: [] });
             return;
         }
         fetchPost(postsList[index], commentsPerPost, readReplies === 'enabled' ? 3 : 0)
@@ -365,7 +367,12 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             sentence = sentence.slice(4);
         }
         if (withAudio) {
-            const utterance = speak(expandAcronyms(sentence.join('')), changeReadingPos, speechSynthesis.getVoices()[parseInt(voice)], parseFloat(readingSpeed), parseInt(volume)/100);
+            const utterance = speak(
+                replaceLinks(expandAcronyms(sentence.join(''))),
+                changeReadingPos,
+                speechSynthesis.getVoices()[parseInt(voice)],
+                parseFloat(readingSpeed),
+                parseInt(volume) / 100);
             wordsSpoken = -1 - acronymOffset(sentence.join(''));
             utterance.onboundary = (e) => { // add event listener to utterance to update spliceIndex when a word is spoken
                 const sentences = commentIndex === -1 ? currentPost!.postInfo.sentences! : currentPost!.comments[commentIndex].sentences!;
@@ -413,10 +420,10 @@ export default function Home(props: {setBackgroundVideo : Function}) {
             setPostText(() => '');
         } else {
             if (androidBugFix === 'enabled') {
-            setPrevText(() => '');
-            setMainText(() => sentence.join(''));
-            setPostText(() => '');
-            return;
+                setPrevText(() => '');
+                setMainText(() => sentence.join(''));
+                setPostText(() => '');
+                return;
             }
             if (sentence.join('').length > 100) {
                 setPrevText(() => '');
@@ -513,155 +520,108 @@ export default function Home(props: {setBackgroundVideo : Function}) {
     useEffect(doCancel, []);
 
     return <>
-        <div className={`primary-container`} style={{backgroundColor: (backgroundVideo === 'enabled' ? '#00000000' : '#112233'), cursor : (controlsContainerVisible ? 'default' : 'none')}}>
+        <div className={`primary-container`} style={{ backgroundColor: (backgroundVideo === 'enabled' ? '#00000000' : '#112233'), cursor: (controlsContainerVisible ? 'default' : 'none') }}>
             <div>
                 {state === State.MAIN &&
-                <div style={{textAlign: 'center'}}>
-                    <p className="text-white primary-text">redditSpeak</p>
-                    <Author author="A text-to-speech reader for Reddit." visible={true} color={"white"}/>
-                    <br/>
-                </div>}
-            <div className={`primary-text-container ${state === State.MAIN ? 'waiting-state' : 'main-state'}`}>
-                {state === State.MAIN ?
-                    <>
-                        <form onSubmit={subredditChosen}>
-                            <span>
-                                { searchBy === 'subreddit' && <h1 className="text-white" style={{ display: 'inline-block', paddingRight: '0.2em'}}>r/</h1> }
-                                <input type="text" className="form-control input-sm input-field" placeholder={searchBy === 'subreddit' ? placeholderSubreddit : 'https://www.reddit.com/r/...'} style={{ width: '55%', display: 'inline-block', margin: '0', boxShadow: '0 0 20px purple' }} ref={inputRef} />
-                                <BsFillArrowRightSquareFill className="arrow" onClick={subredditChosen} />
-                                <br />
+                    <div style={{ textAlign: 'center' }}>
+                        <p className="text-white primary-text">redditSpeak</p>
+                        <Author author="A text-to-speech reader for Reddit." visible={true} color={"white"} />
+                        <br />
+                    </div>}
+                <div className={`primary-text-container ${state === State.MAIN ? 'waiting-state' : 'main-state'}`}>
+                    {state === State.MAIN ?
+                        <>
+                            <form onSubmit={subredditChosen}>
+                                <span>
+                                    {searchBy === 'subreddit' && <h1 className="text-white" style={{ display: 'inline-block', paddingRight: '0.2em' }}>r/</h1>}
+                                    <input type="text" className="form-control input-sm input-field" placeholder={searchBy === 'subreddit' ? placeholderSubreddit : 'https://www.reddit.com/r/...'} style={{ width: '55%', display: 'inline-block', margin: '0', boxShadow: '0 0 20px purple' }} ref={inputRef} />
+                                    <BsFillArrowRightSquareFill className="arrow" onClick={subredditChosen} />
+                                    <br />
+                                </span>
+                            </form>
+                            <span style={{ zIndex: 0, position: 'static', display: 'inline-block' }}>
+                                <p className="subtitle" style={{ display: 'inline-block' }}>Sort posts by: </p>
+                                <Dropdown
+                                    options={[
+                                        DropdownOption('hot-null', '🔥 HOT'),
+                                        DropdownOption('top-day', '📈 TOP (24 hours)'),
+                                        DropdownOption('top-week', '📈 TOP (week)'),
+                                        DropdownOption('top-month', '📈 TOP (month)'),
+                                        DropdownOption('top-year', '📈 TOP (year)'),
+                                        DropdownOption('top-all', '📈 TOP (all time)')]
+                                    } setSelected={setSearchSort} buttonText={searchSortMap.get(searchSort)} />
                             </span>
-                        </form>
-                        <span style={{zIndex: 0, position: 'static', display: 'inline-block'}}>
-                            <p className="subtitle" style={{ display: 'inline-block' }}>Sort posts by: </p>
-                            <Dropdown 
-                                options={[
-                                    DropdownOption('hot-null', '🔥 HOT'), 
-                                    DropdownOption('top-day', '📈 TOP (24 hours)'), 
-                                    DropdownOption('top-week', '📈 TOP (week)'), 
-                                    DropdownOption('top-month', '📈 TOP (month)'), 
-                                    DropdownOption('top-year', '📈 TOP (year)'), 
-                                    DropdownOption('top-all', '📈 TOP (all time)')]
-                                } setSelected={setSearchSort} buttonText={searchSortMap.get(searchSort)} />
-                        </span>
-                        <br />
-                        <span style={{zIndex: 2000, position: 'static'}}>
-                            <p className="subtitle" style={{ display: 'inline-block' }}>Reader Style: </p>
-                            <Dropdown 
-                                options={[
-                                    DropdownOption('Post', 'Post Mode'),
-                                    DropdownOption('Answer', 'Answer Mode'),
-                                    DropdownOption('Story', 'Story Mode'),
-                                    DropdownOption('Discussion', 'Discussion Mode'),
-                                    DropdownOption('Discourse', 'Discourse Mode'),
-                                    DropdownOption('Custom', 'Custom')
-                                ]} setSelected={setReaderSetting} buttonText={readerSetting === 'custom' ? 'Custom' : readerSetting + ' Mode'} />
-                        </span>
-                        {/* <BsFillQuestionCircleFill color="lightslategrey" size="1.5em"/> */}
-                        <p className="reader-explained">
-                            {
-                                readerSetting === 'Post' ? 'Reads only posts and not comments.' :
-                                readerSetting === 'Answer' ? 'Reads the most upvoted answer to each post.' :
-                                readerSetting === 'Story' ? 'Reads the top three replies to each post.' :
-                                readerSetting === 'Discussion' ? 'Reads up to 300 comments for each post.' :
-                                readerSetting === 'Discourse' ? 'Reads up to 300 comments and replies for each post.' :
-                                readerSetting === 'Custom' ? 'Custom Reader Setting' :
-                                ''
-                            }
-                        </p>
-                    </>
-                    : state === State.LOADING ?
-                        <p className="primary-text">Loading...</p>
-                        : state === State.ACTIVE ?
-                            <div style={{cursor: 'pointer'}} onClick={() => {
-                                if (!playing && currentPermalink !== '')
-                                    window.open('https://www.reddit.com' + currentPermalink, '_blank');
-                            }}>
-                                <Author author={authorText} visible={authorVisible} color={authorColor} />
-                                <p>
-                                    <mark className="secondary-text">{prevText}</mark>
-                                    <mark className="primary-text">{mainText}</mark>
-                                    <mark className="secondary-text">{postText}</mark>
-                                </p>
-                                <Author author="---" visible={false} />
-                            </div>
-                            : null
-                }
-            </div>
-        </div>
-        {state !== State.LOADING &&
-            <div className={`controls-container ${controlsContainerVisible ? 'show-container' : 'hide-container'}`}>
-                {state === State.ACTIVE &&
-                    <>
-                        <PlaybackControls changeReadingPos={changeReadingPos} fetchNewPostIndex={fetchNewPostIndex} playing={playing} indices={indices} postIndex={postIndex} doPlay={doPlay} doPause={doPause} />
-                    </>}
-
-                <RiSettings4Fill className="icon" onClick={openModal} />
-                {state === State.ACTIVE ? <BiSolidHome className="icon" onClick={doCancel} /> :
-                    state === State.MAIN ? 
-                    ( playing ? 
-                        <BsPauseFill className="icon" onClick={doPause}/> : 
-                        <BsPlayFill className="icon" onClick={doPlay}/>
-                    ) : null}
-                <BiSolidInfoCircle className="icon" onClick={() => {window.location.replace('https://www.redditspeak.com/about')}}/>
-            </div>}
-
-        <div className="modal fade" id="settings-modal" tabIndex={-1} aria-labelledby="settings-modal-label" aria-hidden="true">
-            <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title" id="settings-modal-label">Settings</h5>
-                        <button type="button" className="btn-close" data-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div className="modal-body">
-                        <p className="subtitle">Search Setting: </p>
-                        <Dropdown options={[
-                            DropdownOption('hot-null', '🔥 HOT'),
-                            DropdownOption('top-day', '📈 TOP (24 hours)'),
-                            DropdownOption('top-week', '📈 TOP (week)'),
-                            DropdownOption('top-month', '📈 TOP (month)'),
-                            DropdownOption('top-year', '📈 TOP (year)'),
-                            DropdownOption('top-all', '📈 TOP (all time)')
-                        ]} setSelected={setSearchSort} buttonText={searchSortMap.get(searchSort)} />
-                        <br />
-                    </div>
-                    <div className="modal-body">
-                        <p className="subtitle">Reader Setting: </p>
-                        <Dropdown options={[
-                            DropdownOption('Post Mode', 'Post'),
-                            DropdownOption('Answer Mode', 'Answer'),
-                            DropdownOption('Story Mode', 'Story'),
-                            DropdownOption('Discussion Mode', 'Discussion'),
-                            DropdownOption('Discourse Mode', 'Discourse'),
-                            DropdownOption('Custom', 'Custom')
-                        ]} setSelected={setReaderSetting} buttonText={readerSetting === 'custom' ? 'Custom' : readerSetting + ' Mode'} />
-                        <br />
-                    </div>
+                            <br />
+                            <span style={{ zIndex: 2000, position: 'static' }}>
+                                <p className="subtitle" style={{ display: 'inline-block' }}>Reader Style: </p>
+                                <Dropdown
+                                    options={[
+                                        DropdownOption('Post', 'Post Mode'),
+                                        DropdownOption('Answer', 'Answer Mode'),
+                                        DropdownOption('Story', 'Story Mode'),
+                                        DropdownOption('Discussion', 'Discussion Mode'),
+                                        DropdownOption('Discourse', 'Discourse Mode'),
+                                        DropdownOption('Custom', 'Custom')
+                                    ]} setSelected={setReaderSetting} buttonText={readerSetting === 'custom' ? 'Custom' : readerSetting + ' Mode'} />
+                            </span>
+                            {/* <BsFillQuestionCircleFill color="lightslategrey" size="1.5em"/> */}
+                            <p className="reader-explained">
+                                {
+                                    readerSetting === 'Post' ? 'Reads only posts and not comments.' :
+                                        readerSetting === 'Answer' ? 'Reads the most upvoted answer to each post.' :
+                                            readerSetting === 'Story' ? 'Reads the top three replies to each post.' :
+                                                readerSetting === 'Discussion' ? 'Reads up to 300 comments for each post.' :
+                                                    readerSetting === 'Discourse' ? 'Reads up to 300 comments and replies for each post.' :
+                                                        readerSetting === 'Custom' ? 'Custom Reader Setting' :
+                                                            ''
+                                }
+                            </p>
+                        </>
+                        : state === State.LOADING ?
+                            <p className="primary-text">Loading...</p>
+                            : state === State.ACTIVE ?
+                                <div style={{ cursor: 'pointer' }} onClick={() => {
+                                    if (!playing && currentPermalink !== '')
+                                        window.open('https://www.reddit.com' + currentPermalink, '_blank');
+                                }}>
+                                    <Author author={authorText} visible={authorVisible} color={authorColor} />
+                                    <p>
+                                        <mark className="secondary-text">{prevText}</mark>
+                                        <mark className="primary-text">{mainText}</mark>
+                                        <mark className="secondary-text">{postText}</mark>
+                                    </p>
+                                    <Author author="---" visible={false} />
+                                </div>
+                                : null
+                    }
                 </div>
             </div>
-            </div>
-        </div>
+            {state !== State.LOADING &&
+                <div className={`controls-container ${controlsContainerVisible ? 'show-container' : 'hide-container'}`}>
+                    {state === State.ACTIVE &&
+                        <>
+                            <PlaybackControls changeReadingPos={changeReadingPos} fetchNewPostIndex={fetchNewPostIndex} playing={playing} indices={indices} postIndex={postIndex} doPlay={doPlay} doPause={doPause} />
+                        </>}
 
-        {showModal &&
-        <div className="" id="settingsModal" role="dialog" aria-labelledby="settingsModalLabel" aria-hidden="true">
-            <div className="modal-dialog" role="document">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h2 className="modal-title" id="exampleModalLabel">Settings</h2>
-                        <button type="button" className="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true" onClick={() => {setShowModal(() => false);}}>&times;</span></button>
-                    </div>
-                    <div className="modal-body">
-                        <h4><strong>Search</strong></h4>
-                        <span>
-                            <p className='modal-option-name'>Search by: </p>
-                            <Dropdown options={[
-                                DropdownOption('subreddit', 'Subreddit'),
-                                DropdownOption('post', 'Specific Post'),
-                            ]} setSelected={m_setSearchBy} buttonText={m_searchBy} dropdownSize='sm' useOptionsForButtonText={true}/>
-                        </span>
-                        <br/>
-                        <span>
-                            <p className='modal-option-name'>Sort pots by: </p>
+                    <RiSettings4Fill className="icon" onClick={openModal} />
+                    {state === State.ACTIVE ? <BiSolidHome className="icon" onClick={doCancel} /> :
+                        state === State.MAIN ?
+                            (playing ?
+                                <BsPauseFill className="icon" onClick={doPause} /> :
+                                <BsPlayFill className="icon" onClick={doPlay} />
+                            ) : null}
+                    <BiSolidInfoCircle className="icon" onClick={() => { window.location.replace('https://www.redditspeak.com/about') }} />
+                </div>}
+
+            <div className="modal fade" id="settings-modal" tabIndex={-1} aria-labelledby="settings-modal-label" aria-hidden="true">
+                <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title" id="settings-modal-label">Settings</h5>
+                            <button type="button" className="btn-close" data-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div className="modal-body">
+                            <p className="subtitle">Search Setting: </p>
                             <Dropdown options={[
                                 DropdownOption('hot-null', '🔥 HOT'),
                                 DropdownOption('top-day', '📈 TOP (24 hours)'),
@@ -669,88 +629,135 @@ export default function Home(props: {setBackgroundVideo : Function}) {
                                 DropdownOption('top-month', '📈 TOP (month)'),
                                 DropdownOption('top-year', '📈 TOP (year)'),
                                 DropdownOption('top-all', '📈 TOP (all time)')
-                            ]} setSelected={m_setSearchSort} buttonText={m_searchSort} dropdownSize='sm' useOptionsForButtonText={true}/>
-                        </span>
-                        <br/>
-                        <span>
-                            <p className='modal-option-name'># of Comments: </p>
-                            <input type="range" className="inline-block" placeholder="0" min="0" max="300" value={m_commentsPerPost} style={{ width: '30%', padding: '0'}} onChange={e => {m_setCommentsPerPost(() => parseInt(e.target.value));}}/>
-                            <p className='inline-block modal-option-name' style={{paddingLeft: '0.2em'}}>{m_commentsPerPost}</p>
-                        </span>
-                        <br/>
-                        <span>
-                            <p className='modal-option-name'>Read Comment Replies: </p>
+                            ]} setSelected={setSearchSort} buttonText={searchSortMap.get(searchSort)} />
+                            <br />
+                        </div>
+                        <div className="modal-body">
+                            <p className="subtitle">Reader Setting: </p>
                             <Dropdown options={[
-                                DropdownOption('enabled', 'Enabled'),
-                                DropdownOption('disabled', 'Disabled'),
-                            ]} setSelected={m_setReadReplies} buttonText={m_readReplies} dropdownSize='sm' useOptionsForButtonText={true}/>
-                        </span>
-                        <br/><br/>
-                        <h4><strong>Speech</strong></h4>
-                        <span>
-                            <p className='modal-option-name'>Voice: </p>
-                            <Dropdown options={
-                                speechSynthesis.getVoices()
-                                    .map((voice, index) => [index, voice] as [number, SpeechSynthesisVoice])    
-                                    .filter(item => item[1].lang === 'en-US' || item[1].lang === 'en-GB')
-                                    .map(item => {
-                                        const [index, voice] = item as [number, SpeechSynthesisVoice];
-                                        return DropdownOption(index.toString(), voice.name.split(' - ')[0].replace('Microsoft ', '').replace('Google ', '').replace('US Engl', '(unstable) US Engl').replace('UK Engl', '(unstable) UK Engl'))
-                                    })
-                            } setSelected={m_setVoice} buttonText={m_voice} dropdownSize='sm' useOptionsForButtonText={true}/>
-                        </span>
-                        <br/>
-                        <span>
-                            <p className='modal-option-name'>Reading Speed: </p>
-                            <Dropdown options={[
-                                DropdownOption('0.5', 'Very Slow'),
-                                DropdownOption('0.875', 'Slow'),
-                                DropdownOption('1.0', 'Normal'),
-                                DropdownOption('2.0', 'Fast'),
-                                DropdownOption('3.0', 'Very Fast')
-                            ]} setSelected={m_setReadingSpeed} buttonText={m_readingSpeed} dropdownSize='sm' useOptionsForButtonText={true}/>
-                        </span>
-                        <br/>
-                        <span>
-                            <p className='modal-option-name'>Volume: </p>
-                            <input type="range" className="inline-block" placeholder="100" min="0" max="100" value={m_volume} style={{ width: '30%', padding: '0'}} onChange={e => {m_setVolume(() => e.target.value);}}/>
-                            <p className='inline-block modal-option-name' style={{paddingLeft: '0.2em'}}>{m_volume}</p>
-                        </span>
-                        <br />
-                        <span>
-                            <p className='modal-option-name'>Fix "Stuck Text" on Android: </p>
-                            <Dropdown options={[
-                                DropdownOption('enabled', 'Enabled (Less Features)'),
-                                DropdownOption('disabled', 'Disabled'),
-                            ]} setSelected={m_setAndroidBugFix} buttonText={m_androidBugFix} dropdownSize='sm' useOptionsForButtonText={true}/>
-                        </span>
-                        <br/><br/>
-                        <h4><strong>Background</strong></h4>
-                        <span>
-                            <p className='modal-option-name'>Background Video: </p>
-                            <Dropdown options={[
-                                DropdownOption('enabled', 'Enabled'),
-                                DropdownOption('disabled', 'Disabled'),
-                            ]} setSelected={m_setBackgroundVideo} buttonText={m_backgroundVideo} dropdownSize='sm' useOptionsForButtonText={true}/>
-                        </span>
-                        <br/>
-                        <span> {
-                            m_backgroundVideo === 'enabled' && <>
-                            <p className='modal-option-name'>Video URL: </p>
-                            <input type="text" className="form-control" placeholder="(Leave empty for no change)" onChange={e => m_backgroundVideoUrl.current = e.currentTarget.value!} style={{ width: '60%', height: '1.8em', padding: '0', display: 'inline-block'}}/>
-                            <br/>
-                            <p className='modal-option-name'>Pause Button Pauses Video: </p>
-                            <input type="checkbox" className="inline-block" checked={m_pausingAudioPausesVideo} onChange={e => m_setPausingAudioPausesVideo(e.target.checked)}/>
-                            </>
-                            }
-                        </span>
-                    </div>
-                    <div className="modal-footer">
-                        <button type="button" className="btn btn-secondary" data-dismiss="modal" onClick={() => {setShowModal(() => false);}}>Close</button>
-                        <button type="button" className="btn btn-primary" onClick={saveModal}>Save changes</button>
+                                DropdownOption('Post Mode', 'Post'),
+                                DropdownOption('Answer Mode', 'Answer'),
+                                DropdownOption('Story Mode', 'Story'),
+                                DropdownOption('Discussion Mode', 'Discussion'),
+                                DropdownOption('Discourse Mode', 'Discourse'),
+                                DropdownOption('Custom', 'Custom')
+                            ]} setSelected={setReaderSetting} buttonText={readerSetting === 'custom' ? 'Custom' : readerSetting + ' Mode'} />
+                            <br />
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>}
+        </div>
+
+        {showModal &&
+            <div className="" id="settingsModal" role="dialog" aria-labelledby="settingsModalLabel" aria-hidden="true">
+                <div className="modal-dialog" role="document">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h2 className="modal-title" id="exampleModalLabel">Settings</h2>
+                            <button type="button" className="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true" onClick={() => { setShowModal(() => false); }}>&times;</span></button>
+                        </div>
+                        <div className="modal-body">
+                            <h4><strong>Search</strong></h4>
+                            <span>
+                                <p className='modal-option-name'>Search by: </p>
+                                <Dropdown options={[
+                                    DropdownOption('subreddit', 'Subreddit'),
+                                    DropdownOption('post', 'Specific Post'),
+                                ]} setSelected={m_setSearchBy} buttonText={m_searchBy} dropdownSize='sm' useOptionsForButtonText={true} />
+                            </span>
+                            <br />
+                            <span>
+                                <p className='modal-option-name'>Sort pots by: </p>
+                                <Dropdown options={[
+                                    DropdownOption('hot-null', '🔥 HOT'),
+                                    DropdownOption('top-day', '📈 TOP (24 hours)'),
+                                    DropdownOption('top-week', '📈 TOP (week)'),
+                                    DropdownOption('top-month', '📈 TOP (month)'),
+                                    DropdownOption('top-year', '📈 TOP (year)'),
+                                    DropdownOption('top-all', '📈 TOP (all time)')
+                                ]} setSelected={m_setSearchSort} buttonText={m_searchSort} dropdownSize='sm' useOptionsForButtonText={true} />
+                            </span>
+                            <br />
+                            <span>
+                                <p className='modal-option-name'># of Comments: </p>
+                                <input type="range" className="inline-block" placeholder="0" min="0" max="300" value={m_commentsPerPost} style={{ width: '30%', padding: '0' }} onChange={e => { m_setCommentsPerPost(() => parseInt(e.target.value)); }} />
+                                <p className='inline-block modal-option-name' style={{ paddingLeft: '0.2em' }}>{m_commentsPerPost}</p>
+                            </span>
+                            <br />
+                            <span>
+                                <p className='modal-option-name'>Read Comment Replies: </p>
+                                <Dropdown options={[
+                                    DropdownOption('enabled', 'Enabled'),
+                                    DropdownOption('disabled', 'Disabled'),
+                                ]} setSelected={m_setReadReplies} buttonText={m_readReplies} dropdownSize='sm' useOptionsForButtonText={true} />
+                            </span>
+                            <br /><br />
+                            <h4><strong>Speech</strong></h4>
+                            <span>
+                                <p className='modal-option-name'>Voice: </p>
+                                <Dropdown options={
+                                    speechSynthesis.getVoices()
+                                        .map((voice, index) => [index, voice] as [number, SpeechSynthesisVoice])
+                                        .filter(item => item[1].lang === 'en-US' || item[1].lang === 'en-GB')
+                                        .map(item => {
+                                            const [index, voice] = item as [number, SpeechSynthesisVoice];
+                                            return DropdownOption(index.toString(), voice.name.split(' - ')[0].replace('Microsoft ', '').replace('Google ', '').replace('US Engl', '(unstable) US Engl').replace('UK Engl', '(unstable) UK Engl'))
+                                        })
+                                } setSelected={m_setVoice} buttonText={m_voice} dropdownSize='sm' useOptionsForButtonText={true} />
+                            </span>
+                            <br />
+                            <span>
+                                <p className='modal-option-name'>Reading Speed: </p>
+                                <Dropdown options={[
+                                    DropdownOption('0.5', 'Very Slow'),
+                                    DropdownOption('0.875', 'Slow'),
+                                    DropdownOption('1.0', 'Normal'),
+                                    DropdownOption('1.5', 'Fast'),
+                                    DropdownOption('2.5', 'Very Fast')
+                                ]} setSelected={m_setReadingSpeed} buttonText={m_readingSpeed} dropdownSize='sm' useOptionsForButtonText={true} />
+                            </span>
+                            <br />
+                            <span>
+                                <p className='modal-option-name'>Volume: </p>
+                                <input type="range" className="inline-block" placeholder="100" min="0" max="100" value={m_volume} style={{ width: '30%', padding: '0' }} onChange={e => { m_setVolume(() => e.target.value); }} />
+                                <p className='inline-block modal-option-name' style={{ paddingLeft: '0.2em' }}>{m_volume}</p>
+                            </span>
+                            <br />
+                            <span>
+                                <p className='modal-option-name'>Fix "Stuck Text" on Android: </p>
+                                <Dropdown options={[
+                                    DropdownOption('enabled', 'Enabled (Less Features)'),
+                                    DropdownOption('disabled', 'Disabled'),
+                                ]} setSelected={m_setAndroidBugFix} buttonText={m_androidBugFix} dropdownSize='sm' useOptionsForButtonText={true} />
+                            </span>
+                            <br /><br />
+                            <h4><strong>Background</strong></h4>
+                            <span>
+                                <p className='modal-option-name'>Background Video: </p>
+                                <Dropdown options={[
+                                    DropdownOption('enabled', 'Enabled'),
+                                    DropdownOption('disabled', 'Disabled'),
+                                ]} setSelected={m_setBackgroundVideo} buttonText={m_backgroundVideo} dropdownSize='sm' useOptionsForButtonText={true} />
+                            </span>
+                            <br />
+                            <span> {
+                                m_backgroundVideo === 'enabled' && <>
+                                    <p className='modal-option-name'>Video URL: </p>
+                                    <input type="text" className="form-control" placeholder="(Leave empty for no change)" onChange={e => m_backgroundVideoUrl.current = e.currentTarget.value!} style={{ width: '60%', height: '1.8em', padding: '0', display: 'inline-block' }} />
+                                    <br />
+                                    <p className='modal-option-name'>Pause Button Pauses Video: </p>
+                                    <input type="checkbox" className="inline-block" checked={m_pausingAudioPausesVideo} onChange={e => m_setPausingAudioPausesVideo(e.target.checked)} />
+                                </>
+                            }
+                            </span>
+                        </div>
+                        <div className="modal-footer">
+                            <button type="button" className="btn btn-secondary" data-dismiss="modal" onClick={() => { setShowModal(() => false); }}>Close</button>
+                            <button type="button" className="btn btn-primary" onClick={saveModal}>Save changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>}
     </>;
 }
